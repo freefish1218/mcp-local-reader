@@ -1,0 +1,38 @@
+# 解析旧的 .doc/.ppt 文件需要安装 libreoffice
+
+# MCP 核心
+fastmcp>=2.8.0
+
+# langchain
+langchain_openai>=0.3.22
+langchain_core>=0.3.65
+
+# 基础组件
+pydantic>=2.11.4
+diskcache>=5.6.3
+aiohttp>=3.12.12
+httpx>=0.25.0  # HTTP下载客户端
+
+# PDF解析（使用轻量级的 PyMuPDF 替代 langchain）
+pymupdf4llm>=0.0.24
+
+# Office文档处理（轻量级替代unstructured 与 langchain-community）
+python-pptx>=1.0.2
+pandas>=2.3.0
+openpyxl>=3.1.5    #Excel处理
+odfpy>=1.4.1
+
+# 图像处理（OCR用）
+Pillow>=10.4.0
+
+# 特别说明
+# 需安装 libreoffice 才能解析 .doc/.ppt 文件
+# 需安装 pandoc 解析 .doc/.odt/.rtf/.epub 文件
+
+
+
+# 暂不需要的依赖
+# PyMuPDF>=1.23.24
+# xlrd>=2.0.1      #Excel处理
+# python-docx>=1.1.2 #Word处理
+# striprtf>=0.0.29   #RTF处理

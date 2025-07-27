@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=64.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mcp-file-reader"
+version = "1.1.0"
+description = "MCP文件内容读取服务 - 从各类文件中提取内容"
+authors = [{name = "Ben"}]
+readme = "README.md"
+requires-python = ">=3.11"
+
+[tool.setuptools.packages.find]
+where = [".", "src"]
+include = ["src/*", "file_reader", "file_reader/*"] 

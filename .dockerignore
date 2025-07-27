@@ -1,0 +1,72 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.coverage
+.pytest_cache
+htmlcov
+*.egg-info
+
+# 虚拟环境
+venv
+env
+ENV
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# 缓存和日志
+cache
+logs
+*.log
+*.cache
+
+# 环境文件
+.env
+.env.local
+
+# 临时文件
+*.tmp
+*.temp
+temp
+
+# 文档（保留 README.md）
+*.md
+!README.md
+
+# 测试相关
+tests
+pytest.ini
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+
+# Docker 相关
+Dockerfile
+.dockerignore
+docker-compose.yml
+DOCKER.md
+build.sh
+test_docker.sh
+
+# 示例和客户端文件
+client_example.py
+
+# 编辑器备份文件
+*~
+.#*
+#*# 
