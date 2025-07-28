@@ -8,33 +8,14 @@ from pydantic import BaseModel, Field
 import os
 
 
-class UrlWithReferer(BaseModel):
-    """URL和对应的Referer"""
-    url: str = Field(description="文件下载链接")
-    referer: Optional[str] = Field(None, description="该链接专用的Referer")
-
 
 class FailureType(str, Enum):
-    """失败类型枚举（与下载服务错误类型保持一致）"""
-    
-    # 网络和连接相关错误
-    NETWORK_ERROR = "network_error"          # 网络连接错误
-    TIMEOUT = "timeout"                      # 请求超时
-    SSL_ERROR = "ssl_error"                  # SSL/TLS错误
-    PROXY_FAILURE = "proxy_failure"          # 代理失败
-    
-    # HTTP状态码相关错误
-    FORBIDDEN = "forbidden"                  # 403 禁止访问
-    NOT_FOUND = "not_found"                  # 404 资源不存在
-    SERVER_ERROR = "server_error"            # 5xx 服务器错误
+    """失败类型枚举"""
     
     # 文件和内容相关错误
     SIZE_EXCEEDED = "size_exceeded"          # 文件大小超限
-    INVALID_URL = "invalid_url"              # 无效URL
-    INVALID_CONTENT_TYPE = "invalid_content_type"  # 无效内容类型
     INVALID_FILE_FORMAT = "invalid_file_format"    # 无效文件格式
     UNSUPPORTED_TYPE = "unsupported_type"    # 不支持的文件类型
-    SUSPICIOUS_CONTENT = "suspicious_content"      # 可疑内容
     
     # 解析相关错误
     PARSE_ERROR = "parse_error"              # 文件解析错误
@@ -57,25 +38,6 @@ class FailedFile(BaseModel):
     type: FailureType = Field(description="失败类型标识")
     error_message: Optional[str] = Field(None, description="详细错误信息")
 
-
-class ReadRequest(BaseModel):
-    """文件读取请求"""
-    resource_ids: List[str] = Field(description="文件下载链接数组（URLs）或存储资源ID数组")
-    referer_map: Optional[Dict[str, str]] = Field(None, description="URL到专属Referer的映射")
-    expires: Optional[int] = Field(None, description="文件过期时长（秒）")
-    max_size: int = Field(
-        default_factory=lambda: int(os.getenv("FILE_READER_MAX_FILE_SIZE_MB", "20")) * 1024 * 1024,
-        description="单个文件最大大小限制(字节数)"
-    )
-    use_proxy: bool = Field(False, description="是否使用代理")
-    max_retries: int = Field(3, description="最大重试次数")
-    max_workers: int = Field(3, description="最大并发工作线程数")
-    
-    def get_referer_for_url(self, url: str) -> Optional[str]:
-        """获取指定URL的Referer，从referer_map中查找"""
-        if self.referer_map and url in self.referer_map:
-            return self.referer_map[url]
-        return None
 
 
 class LocalReadRequest(BaseModel):
@@ -130,10 +92,3 @@ class OCRResponse(BaseModel):
     error: Optional[str] = Field(default=None, description="错误信息")
 
 
-class DownloadResult(BaseModel):
-    """下载结果，包含文件内容和正确的resource_id映射"""
-    files: Dict[str, bytes] = Field(description="URL到文件内容的映射")
-    resource_ids: Dict[str, str] = Field(description="URL到正确resource_id的映射")
-    
-    class Config:
-        arbitrary_types_allowed = True  # 允许bytes类型

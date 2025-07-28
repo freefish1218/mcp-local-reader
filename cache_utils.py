@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-MCP-File-Reader 缓存工具
-用于查看缓存统计信息、管理缓存和分析缓存性能
+MCP-Local-Reader 缓存工具
+用于查看本地文件缓存统计信息、管理缓存和分析缓存性能
 """
 
 import os
@@ -24,16 +24,15 @@ def show_clear_warning():
     print("=" * 50)
     print("清理缓存将删除以下内容:")
     print("  📁  本地缓存目录中的所有文件")
-    print("  💾  HTTP下载和本地文件缓存")
+    print("  💾  本地文件缓存")
     print("  📄  解析结果缓存和图像OCR缓存")
-    print("  • HTTP下载的原始文件不会被删除")
     print("  • 清理后的首次访问可能较慢")
     print()
     print("缓存清理的好处:")
     print("  🔄  释放磁盘空间")
     print("  🐛  解决缓存损坏问题")
     print("  🔧  测试和调试")
-    print("  ⚡  强制重新下载最新内容")
+    print("  ⚡  强制重新处理最新内容")
     print()
 
 
@@ -80,31 +79,6 @@ def clear_local_storage_cache():
         return False
 
 
-def clear_http_download_cache():
-    """清理HTTP下载存储客户端的缓存"""
-    try:
-        from file_reader.storage import HTTPDownloadStorageClient
-        
-        # 使用默认配置创建HTTP下载存储客户端
-        http_client = HTTPDownloadStorageClient()
-        
-        # 显示清理前的缓存统计信息
-        stats = http_client.get_stats()
-        print(f"清理前的HTTP下载缓存统计:")
-        print(f"  缓存项数: {stats.get('cache_size', 0)}")
-        print(f"  HTTP缓存条目: {stats.get('http_cache_entries', 0)}")
-        print(f"  缓存命中率: {stats.get('cache_hit_rate', 0):.2%}")
-        print(f"  总缓存大小: {format_size(stats.get('total_cached_bytes', 0))}")
-        print(f"  下载次数: {stats.get('downloads', 0)}")
-        print(f"  缓存命中: {stats.get('cache_hits', 0)}")
-        print(f"  缓存未命中: {stats.get('cache_misses', 0)}")
-        
-        http_client.clear_cache()
-        logger.info("HTTP下载存储客户端缓存已清理")
-        return True
-    except Exception as e:
-        logger.error(f"清理HTTP下载存储缓存失败: {e}")
-        return False
 
 
 def clear_parsed_content_cache():
@@ -199,7 +173,7 @@ def format_size(size_bytes: int) -> str:
 
 def show_cache_stats():
     """显示缓存统计信息"""
-    print("📊 MCP-File-Reader 缓存统计信息")
+    print("📊 MCP-Local-Reader 缓存统计信息")
     print("=" * 50)
     
     # 显示本地文件存储客户端统计
@@ -243,48 +217,6 @@ def show_cache_stats():
         logger.error(f"获取本地文件存储统计失败: {e}")
         print("  ❌ 无法获取本地文件缓存统计信息")
     
-    # 显示HTTP下载存储客户端统计
-    print("\n🌐 HTTP下载存储客户端缓存:")
-    try:
-        from file_reader.storage import HTTPDownloadStorageClient
-        
-        http_client = HTTPDownloadStorageClient()
-        http_stats = http_client.get_stats()
-        
-        http_key_stats = [
-            ('总下载次数', 'downloads'),
-            ('缓存命中次数', 'cache_hits'),
-            ('缓存未命中次数', 'cache_misses'),
-            ('缓存命中率', 'cache_hit_rate'),
-            ('总下载大小', 'total_size'),
-            ('错误次数', 'errors'),
-            ('缓存项数', 'cache_size'),
-            ('HTTP缓存条目', 'http_cache_entries'),
-            ('总缓存大小', 'total_cached_bytes'),
-        ]
-        
-        for label, key in http_key_stats:
-            if key in http_stats:
-                value = http_stats[key]
-                if key in ['cache_hit_rate']:
-                    print(f"  {label}: {value:.2%}")
-                elif key in ['total_size', 'total_cached_bytes']:
-                    print(f"  {label}: {format_size(value)}")
-                else:
-                    print(f"  {label}: {value}")
-        
-        if 'service_url' in http_stats:
-            print(f"  下载服务URL: {http_stats['service_url']}")
-        if 'enabled' in http_stats:
-            print(f"  服务状态: {'启用' if http_stats['enabled'] else '禁用'}")
-        if 'cache_directory' in http_stats and http_stats['cache_directory']:
-            print(f"  缓存目录: {http_stats['cache_directory']}")
-        if 'cache_size_limit' in http_stats:
-            print(f"  缓存大小限制: {format_size(http_stats['cache_size_limit'])}")
-        
-    except Exception as e:
-        logger.error(f"获取HTTP下载存储统计失败: {e}")
-        print("  ❌ 无法获取HTTP下载缓存统计信息")
     
     # 显示解析结果缓存统计
     print("\n📄 解析结果缓存:")
@@ -337,8 +269,9 @@ def show_cache_stats():
     
     # 显示目录缓存大小
     cache_directories = [
-        "cache/http_download",       # HTTP下载缓存
-        "cache/local_file_reader",   # 本地文件缓存
+        "cache/parsed_content",      # 解析结果缓存
+        "cache/document_images",     # 图像缓存
+        "cache/archive_files",       # 压缩文件缓存
         "cache",                     # 总缓存目录
         "__pycache__",               # Python缓存
         "src/file_reader/__pycache__",
@@ -450,8 +383,9 @@ def export_cache_stats(output_file: str):
         
         # 收集目录缓存统计
         cache_directories = [
-            "cache/http_download",     # HTTP下载缓存
-            "cache/local_file_reader", # 本地文件缓存
+            "cache/parsed_content",    # 解析结果缓存
+            "cache/document_images",   # 图像缓存
+            "cache/archive_files",     # 压缩文件缓存
             "cache",                   # 总缓存目录
             "__pycache__"              # Python缓存
         ]
@@ -491,12 +425,6 @@ def perform_clear_operation(args):
         if clear_local_storage_cache():
             success_count += 1
     
-    if args.all:
-        # 清理HTTP下载缓存
-        print("\n🗑️  清理HTTP下载存储缓存...")
-        total_count += 1
-        if clear_http_download_cache():
-            success_count += 1
     
     if args.all or args.parsed:
         # 清理解析结果缓存
@@ -536,7 +464,7 @@ def perform_clear_operation(args):
 
 def main():
     """主函数"""
-    parser = argparse.ArgumentParser(description="MCP-File-Reader 缓存管理工具")
+    parser = argparse.ArgumentParser(description="MCP-Local-Reader 缓存管理工具")
     parser.add_argument("--stats", action="store_true", help="显示缓存统计信息")
     parser.add_argument("--analyze", action="store_true", help="分析缓存性能")
     parser.add_argument("--clear", action="store_true", help="进入缓存清理模式（需要确认）")
@@ -554,7 +482,7 @@ def main():
     
     args = parser.parse_args()
     
-    print("🛠️  MCP-File-Reader 缓存管理工具")
+    print("🛠️  MCP-Local-Reader 缓存管理工具")
     print("=" * 50)
     
     # 显示统计信息

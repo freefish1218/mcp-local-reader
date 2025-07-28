@@ -7,14 +7,11 @@ import os
 import json
 import re
 
-from typing import Dict, Any, Optional, List, Callable, Awaitable, Union
-from fastmcp import Client
-from fastmcp.client.transports import StreamableHttpTransport
+from typing import Dict, Any, Optional, Union, List
 from langchain_openai import ChatOpenAI
-from langchain_core.tools import tool
 
-from file_reader.config import McpServerInstance, get_config
-from file_reader.utils import get_logger
+from .config import DEFAULT_OPENAI_MODEL
+from .utils import get_logger
 
 from dotenv import load_dotenv
 load_dotenv(override=True)
@@ -36,87 +33,25 @@ async def get_llm(agent_name: Optional[str] = None) -> ChatOpenAI:
     Returns:
         ChatOpenAI: 配置好的ChatOpenAI实例
     """
-    prefix = f"{agent_name}_" if agent_name else ""
-    platform = os.getenv(f"{prefix}AGENT_LLM_PLATFORM", DEFAULT_LLM_PLATFORM)
-    model = os.getenv(f"{prefix}AGENT_LLM_MODEL", DEFAULT_LLM_MODEL)
+    # 直接从环境变量获取配置
+    model = os.getenv("OPENAI_MODEL", DEFAULT_OPENAI_MODEL)
+    api_key = os.getenv("OPENAI_API_KEY")
+    base_url = os.getenv("OPENAI_API_BASE")
     
-    platform_info = await get_config(f"{platform}_MODEL")
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY environment variable is required")
     
-    return ChatOpenAI(
-        verbose=VERBOSE,
-        model=platform_info.get(model, model),
-        openai_api_base=platform_info.get("BASE_URL"),
-        openai_api_key=platform_info.get("API_KEY"),
-    )
+    kwargs = {
+        "model": model,
+        "api_key": api_key,
+        "verbose": VERBOSE,
+    }
+    
+    if base_url:
+        kwargs["base_url"] = base_url
+    
+    return ChatOpenAI(**kwargs)
 
-async def get_tools(
-    servers: Dict[str, McpServerInstance],
-    patch: Optional[Dict[str, Callable[[Any], Awaitable[Any]]]] = None
-) -> List[Any]:
-    """
-    获取工具列表
-    
-    Args:
-        servers: MCP服务器实例字典
-        patch: 可选的工具补丁函数字典
-        
-    Returns:
-        List[Any]: 工具列表
-    """
-    tools = []
-    
-    # 为每个服务器创建客户端并获取工具
-    for key, server in servers.items():
-        try:
-            # 创建传输层
-            transport = StreamableHttpTransport(url=server["endpoints"])
-            
-            # 使用 fastmcp Client 获取工具列表
-            async with Client(transport) as client:
-                mcp_tools = await client.list_tools()
-                
-                for mcp_tool in mcp_tools:
-                    tool_name = f"{key}_{mcp_tool.name}"
-                    tool_description = mcp_tool.description
-                    tool_schema = mcp_tool.inputSchema
-                    tool_actual_name = mcp_tool.name
-                    
-                    # 为每个工具创建一个闭包函数，捕获必要的变量
-                    async def create_tool_func(server_info=server, actual_name=tool_actual_name, t_name=tool_name):
-                        async def tool_func(**args):
-                            logger.info(f"----------- call tools: {t_name}, args: {json.dumps(args, ensure_ascii=False)}")
-                            
-                            # 每次调用工具时创建新的客户端
-                            transport = StreamableHttpTransport(url=server_info["endpoints"])
-                            async with Client(transport) as client:
-                                # 使用 fastmcp 调用工具
-                                result = await client.call_tool(
-                                    name=actual_name,
-                                    arguments=args
-                                )
-                                
-                                # 应用补丁函数（如果存在）
-                                if patch and t_name in patch:
-                                    return await patch[t_name](result)
-                                
-                                return result
-                        return tool_func
-                    
-                    # 创建工具函数并添加到工具列表
-                    tool_function = await create_tool_func()
-                    tools.append(tool(
-                        tool_function,
-                        name=tool_name,
-                        description=tool_description,
-                        args_schema=tool_schema
-                    ))
-        except Exception as e:
-            import traceback
-            error_traceback = traceback.format_exc()
-            logger.error(f"Error getting tools for {key}: {str(e)}\nException type: {type(e).__name__}\nTraceback: {error_traceback}")
-            continue
-    
-    return tools
 
 def parse_json(json_str: str) -> Union[Dict, List]:
     """

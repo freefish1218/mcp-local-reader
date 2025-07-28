@@ -6,8 +6,8 @@
 import asyncio
 from typing import List, Dict, Any, Optional
 
-from .models import ReadRequest, ReadResponse, FailureType
-from .storage import HTTPDownloadStorageClient, BaseStorageClient
+from .models import ReadResponse, FailureType, LocalReadRequest
+from .storage import LocalFileStorageClient, BaseStorageClient
 from .parsers import PDFParser, OfficeParser, TextParser, ImageParser, ArchiveParser
 from .utils import get_logger, format_file_size
 from .config import SUPPORTED_DOC_TYPES, IGNORED_TYPES
@@ -38,8 +38,8 @@ class FileReader:
         """
         self.logger = get_logger("file_reader.core")
         
-        # 初始化存储客户端，默认使用HTTP下载
-        self.storage_client = storage_client or HTTPDownloadStorageClient()
+        # 初始化存储客户端，默认使用本地文件存储
+        self.storage_client = storage_client or LocalFileStorageClient()
         
         # 配置参数
         self.max_workers = max_workers
@@ -156,20 +156,26 @@ class FileReader:
         
         return normalized_url, None
 
-    async def read_files(self, request: ReadRequest) -> ReadResponse:
+    async def read_files(self, request) -> ReadResponse:
         """
         批量读取文件内容
         
         Args:
-            request: 文件读取请求
+            request: 文件读取请求（LocalReadRequest 或包含 resource_ids 的对象）
             
         Returns:
             读取响应结果
         """
         self.stats["total_requests"] += 1
-        self.stats["total_files_processed"] += len(request.resource_ids)
+        # 获取资源ID列表（兼容 LocalReadRequest 和其他请求格式）
+        if hasattr(request, 'file_paths'):
+            resource_ids = request.file_paths
+        else:
+            resource_ids = request.resource_ids
+            
+        self.stats["total_files_processed"] += len(resource_ids)
         
-        self.logger.info(f"开始批量处理文件读取请求，包含 {len(request.resource_ids)} 个文件")
+        self.logger.info(f"开始批量处理文件读取请求，包含 {len(resource_ids)} 个文件")
         
         response = ReadResponse()
         
@@ -177,7 +183,7 @@ class FileReader:
         normalized_urls = []
         url_mapping = {}  # 原始URL到标准化URL的映射
         
-        for original_url in request.resource_ids:
+        for original_url in resource_ids:
             normalized_url, error_message = self._normalize_and_validate_url(original_url)
             
             if error_message:
@@ -221,142 +227,31 @@ class FileReader:
                 self.stats["total_content_size"] += len(content)
             return response
         
-        # 创建新的请求对象，只包含需要下载的URL
-        download_request = ReadRequest(
-            resource_ids=urls_need_download,
-            referer_map=request.referer_map,
-            max_size=request.max_size,
-            use_proxy=request.use_proxy,
-            max_retries=request.max_retries,
-            max_workers=request.max_workers
-        )
+        # 创建下载请求参数
+        download_request = {
+            "resource_ids": urls_need_download,
+            "max_size": getattr(request, 'max_size', 20 * 1024 * 1024),
+            "max_workers": getattr(request, 'max_workers', 3)
+        }
         
         self.logger.info(f"解析缓存命中: {len(cached_results)} 个，需要下载: {len(urls_need_download)} 个")
         
-        # 第二步：下载缓存未命中的文件
-        if hasattr(self.storage_client, 'download_files_batch'):
-            # HTTP下载模式
-            self.logger.debug("使用HTTP批量下载模式")
-            
-            # 预处理：检查file://格式的URL是否在HTTP下载缓存中
-            file_urls_to_check = []
-            remaining_urls = []
-            
-            for url in urls_need_download:
-                if url.startswith('file://'):
-                    file_urls_to_check.append(url)
-                else:
-                    remaining_urls.append(url)
-            
-            # 创建初始下载结果
-            from .models import DownloadResult
-            download_result = DownloadResult(files={}, resource_ids={})
-            
-            # 处理file://格式的URL
-            if file_urls_to_check:
-                self.logger.debug(f"检查 {len(file_urls_to_check)} 个file://格式URL的缓存")
-                
-                for url in file_urls_to_check:
-                    resource_id = url[8:] if url.startswith('file:///') else url[7:]  # 正确移除 'file:///' 或 'file://' 前缀
-                    file_content = None
-                    
-                    # 在HTTP下载缓存中查找
-                    if hasattr(self.storage_client, 'cache'):
-                        for cache_key in self.storage_client.cache:
-                            try:
-                                cached_data = self.storage_client.cache.get(cache_key)
-                                if cached_data and isinstance(cached_data, dict):
-                                    cached_resource_id = cached_data.get("resource_id", "")
-                                    if cached_resource_id == resource_id:
-                                        file_content = cached_data.get("content")
-                                        self.logger.debug(f"从HTTP下载缓存找到file://资源: {resource_id}")
-                                        break
-                            except:
-                                continue
-                    
-                    if file_content:
-                        download_result.files[url] = file_content
-                        download_result.resource_ids[url] = resource_id
-                        self.logger.debug(f"成功从缓存获取file://资源: {url}, 大小: {len(file_content)}字节")
-                    else:
-                        # 如果缓存中没有找到，添加到需要下载的列表
-                        remaining_urls.append(url)
-                        self.logger.debug(f"缓存中未找到file://资源: {resource_id}，将尝试下载")
-            
-            # 对于剩余的URL（非file://或缓存中未找到的file://），使用正常的下载流程
-            if remaining_urls:
-                download_request_remaining = ReadRequest(
-                    resource_ids=remaining_urls,
-                    referer_map=download_request.referer_map,
-                    max_size=download_request.max_size,
-                    use_proxy=download_request.use_proxy,
-                    max_retries=download_request.max_retries,
-                    max_workers=download_request.max_workers
-                )
-                
-                remaining_download_result = await self.storage_client.download_files_batch(download_request_remaining)
-                
-                # 合并下载结果
-                download_result.files.update(remaining_download_result.files)
-                download_result.resource_ids.update(remaining_download_result.resource_ids)
-        else:
-            # 本地文件模式 - 创建简单的下载结果
-            self.logger.debug("使用本地文件模式")
-            from .models import DownloadResult
-            
-            download_result = DownloadResult(files={}, resource_ids={})
-            
-            # 对每个URL直接读取本地文件
-            for url in urls_need_download:
-                try:
-                    # 特殊处理：如果是file://格式的resource_id，尝试从HTTP下载服务缓存查找
-                    if url.startswith('file://'):
-                        resource_id = url[8:] if url.startswith('file:///') else url[7:]  # 正确移除 'file:///' 或 'file://' 前缀
-                        
-                        # 检查是否有HTTP下载存储客户端的缓存
-                        file_content = None
-                        if hasattr(self.storage_client, 'cache') and hasattr(self.storage_client, '_get_cache_key'):
-                            # 尝试通过所有可能的缓存键查找
-                            for cache_key in self.storage_client.cache:
-                                try:
-                                    cached_data = self.storage_client.cache.get(cache_key)
-                                    if cached_data and isinstance(cached_data, dict):
-                                        cached_resource_id = cached_data.get("resource_id", "")
-                                        # 检查resource_id是否匹配
-                                        if cached_resource_id == resource_id:
-                                            file_content = cached_data.get("content")
-                                            self.logger.debug(f"从HTTP下载缓存找到file://资源: {resource_id}")
-                                            break
-                                except:
-                                    continue
-                        
-                        if file_content is None:
-                            # 作为fallback，尝试直接读取文件路径
-                            file_path = resource_id
-                            try:
-                                with open(file_path, 'rb') as f:
-                                    file_content = f.read()
-                                self.logger.debug(f"直接读取file://资源: {file_path}")
-                            except Exception as fallback_e:
-                                self.logger.debug(f"直接读取file://资源失败: {file_path}, 错误: {fallback_e}")
-                                raise FileNotFoundError(f"无法找到资源 {resource_id}，既不在缓存中也不在文件系统中")
-                    else:
-                        # 普通文件路径处理
-                        file_path = url
-                        with open(file_path, 'rb') as f:
-                            file_content = f.read()
-                    
-                    download_result.files[url] = file_content
-                    download_result.resource_ids[url] = url
-                    self.logger.debug(f"成功读取本地文件: {url}, 大小: {len(file_content)}字节")
-                    
-                except Exception as e:
-                    self.logger.error(f"读取本地文件失败: {url}, 错误: {e}")
-                    # 本地文件读取失败，不添加到结果中
+        # 第二步：读取缓存未命中的文件
+        self.logger.debug("使用本地文件读取模式")
         
-        self.logger.debug(f"下载结果统计: 成功={len(download_result.files)}, 请求={len(urls_need_download)}")
-        self.logger.debug(f"下载的文件列表: {list(download_result.files.keys())}")
-        self.logger.debug(f"Resource ID映射: {download_result.resource_ids}")
+        # 创建简单的文件读取结果
+        file_results = {}  # url -> bytes content
+        
+        # 对每个文件路径直接读取
+        for file_path in urls_need_download:
+            try:
+                with open(file_path, 'rb') as f:
+                    file_content = f.read()
+                file_results[file_path] = file_content
+                self.logger.debug(f"成功读取本地文件: {file_path}, 大小: {len(file_content)}字节")
+            except Exception as e:
+                self.logger.error(f"读取本地文件失败: {file_path}, 错误: {e}")
+                # 本地文件读取失败，不添加到结果中
         
         # 第三步：将缓存结果添加到响应中
         for url, content in cached_results.items():
@@ -365,81 +260,36 @@ class FileReader:
             self.stats["successful_reads"] += 1
             self.stats["total_content_size"] += len(content)
         
-        # 第四步：并发处理下载的文件
+        # 第四步：并发处理读取的文件
         tasks = []
-        self.logger.debug(f"开始处理下载的文件，urls_need_download: {urls_need_download}")
-        self.logger.debug(f"下载结果包含的文件: {list(download_result.files.keys())}")
+        max_size = getattr(request, 'max_size', 20 * 1024 * 1024)
         
         for normalized_url in urls_need_download:
-            file_content = download_result.files.get(normalized_url)
+            file_content = file_results.get(normalized_url)
             original_url = url_mapping[normalized_url]  # 获取对应的原始URL
-            self.logger.debug(f"查找文件: {normalized_url}, 找到: {file_content is not None}")
             
             if file_content:
-                # 使用下载返回的正确 resource_id 进行处理
-                correct_resource_id = download_result.resource_ids.get(normalized_url, normalized_url)
-                self.logger.debug(f"找到下载的文件: {normalized_url} -> {correct_resource_id}, 大小: {len(file_content)}字节")
-                task = self._process_file_content(correct_resource_id, file_content, download_request.max_size)
+                self.logger.debug(f"找到读取的文件: {normalized_url}, 大小: {len(file_content)}字节")
+                task = self._process_file_content(normalized_url, file_content, max_size)
             else:
-                self.logger.warning(f"未找到下载的文件: {original_url}")
-                self.logger.debug(f"  可用的下载结果: {list(download_result.files.keys())}")
-                
-                # 尝试进行URL比较分析
-                for available_url in download_result.files.keys():
-                    if original_url == available_url:
-                        self.logger.debug(f"  URL完全匹配但仍未找到: {available_url}")
-                    elif original_url in available_url or available_url in original_url:
-                        self.logger.debug(f"  部分匹配的URL: {available_url}")
-                        
-                # 下载失败的文件，尝试获取精确的错误信息
-                error_info = None
-                if hasattr(self.storage_client, '_download_errors'):
-                    error_info = self.storage_client._download_errors.get(normalized_url)
-                
-                if error_info:
-                    # 使用精确的错误类型和信息
-                    error_type_value = error_info["error_type"]
-                    # 将错误类型字符串转换为对应的FailureType枚举
-                    try:
-                        # 下载服务返回的type字段应该是FailureType枚举值的字符串形式
-                        # 首先尝试按值匹配（小写）
-                        error_type = FailureType(error_type_value.lower())
-                    except ValueError:
-                        try:
-                            # 如果按值匹配失败，尝试按枚举名称匹配（大写）
-                            error_type = FailureType[error_type_value.upper()]
-                        except (KeyError, AttributeError):
-                            # 如果都失败，使用默认错误类型
-                            self.logger.warning(f"未知的错误类型: {error_type_value}, 使用默认值 OTHER")
-                            error_type = FailureType.OTHER
-                    task = self._create_failed_task(original_url, error_info["error_message"], error_type)
-                else:
-                    # 使用通用的下载失败错误
-                    task = self._create_failed_task(original_url, "文件下载失败", FailureType.NETWORK_ERROR)
+                self.logger.warning(f"未找到读取的文件: {original_url}")
+                task = self._create_failed_task(original_url, "文件读取失败", FailureType.OTHER)
             tasks.append(task)
         
         # 等待所有任务完成
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
-        # 处理下载结果
+        # 处理读取结果
         for i, result in enumerate(results):
-            normalized_url = urls_need_download[i]  # 获取标准化的URL
-            original_url = url_mapping[normalized_url]  # 获取对应的原始URL
+            normalized_url = urls_need_download[i]
+            original_url = url_mapping[normalized_url]
             
             if isinstance(result, Exception):
                 self.logger.error(f"处理文件时发生异常: {original_url}, 错误: {result}")
-                response.add_failure(
-                    original_url,
-                    FailureType.OTHER,
-                    f"处理异常: {str(result)}"
-                )
+                response.add_failure(original_url, FailureType.OTHER, f"处理异常: {str(result)}")
                 self.stats["failed_reads"] += 1
             elif result is None:
-                response.add_failure(
-                    original_url,
-                    FailureType.OTHER,
-                    "处理结果为空"
-                )
+                response.add_failure(original_url, FailureType.OTHER, "处理结果为空")
                 self.stats["failed_reads"] += 1
             elif isinstance(result, tuple):
                 success, content_or_error, error_type = result
@@ -636,7 +486,7 @@ class FileReader:
         self.storage_client.clear_cache()
         self.logger.info("缓存已清空")
     
-    async def _check_parsed_cache(self, url: str, request: ReadRequest) -> Optional[str]:
+    async def _check_parsed_cache(self, url: str, request) -> Optional[str]:
         """
         检查URL对应的解析缓存
         

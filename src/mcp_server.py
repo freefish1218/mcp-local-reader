@@ -11,41 +11,11 @@ from typing import List, Dict, Optional, Annotated
 from mcp.server.fastmcp import FastMCP
 from mcp.types import TextContent, ToolAnnotations
 
-from file_reader import FileReader, ReadRequest, ReadResponse, FailureType, LocalReadRequest, LocalFileStorageClient, UrlWithReferer
-from file_reader.storage import HTTPDownloadStorageClient
-from file_reader.utils import get_logger
+from .file_reader import FileReader, ReadResponse, FailureType, LocalReadRequest, LocalFileStorageClient
+from .file_reader.utils import get_logger
 from pydantic import Field
 
 
-def detect_docker_environment() -> bool:
-    """
-    检测是否在Docker容器中运行
-    
-    Returns:
-        bool: True表示在Docker容器中运行，False表示在原生环境中
-    """
-    # 方法1: 检查/.dockerenv文件
-    if Path("/.dockerenv").exists():
-        return True
-    
-    # 方法2: 检查cgroup信息
-    try:
-        with open("/proc/1/cgroup", "r") as f:
-            content = f.read()
-            if "docker" in content or "containerd" in content:
-                return True
-    except (FileNotFoundError, PermissionError):
-        pass
-    
-    # 方法3: 检查环境变量
-    if os.getenv("DOCKER_CONTAINER") == "true":
-        return True
-    
-    return False
-
-
-# 全局环境检测
-IS_DOCKER_ENV = detect_docker_environment()
 
 
 def get_version_from_pyproject() -> str:
@@ -83,11 +53,11 @@ version = get_version_from_pyproject()
 
 # 获取服务器信息
 SERVER_INFO = {
-    "name": "MCPFileReaderServer",
+    "name": "MCPLocalFileReaderServer",
     "version": version,
-    "description": "专业的文件内容读取服务，支持通过HTTP下载链接获取和解析文件",
-    "features": ["HTTP下载", "PDF解析", "Office文档", "图像OCR", "文本提取", "批量处理"],
-    "instructions": f"这个服务器提供专业的文件内容读取功能，支持通过HTTP链接下载PDF、Office文档、图像OCR等多种格式的文本提取。当前版本: {version}"
+    "description": "本地文件内容读取服务，支持解析PDF、Office文档等多种格式",
+    "features": ["PDF解析", "Office文档", "图像OCR", "文本提取", "批量处理"],
+    "instructions": f"这个服务器提供本地文件内容读取功能，支持解析PDF、Office文档、图像OCR等多种格式。当前版本: {version}"
 }
 
 # 服务器配置
@@ -100,13 +70,9 @@ SERVER_CONFIG = {
 # 设置日志
 logger = get_logger("mcp.file_reader.server")
 
-# 记录版本和环境信息
-logger.info(f"MCP文件读取器服务器初始化 - 版本: {SERVER_INFO['version']}")
-logger.info(f"运行环境检测: {'Docker容器' if IS_DOCKER_ENV else '原生Python'}")
-if IS_DOCKER_ENV:
-    logger.info("检测到Docker环境，将提供文件上传功能而非本地文件读取")
-else:
-    logger.info("检测到原生环境，将提供本地文件读取功能")
+# 记录版本信息
+logger.info(f"MCP本地文件读取器服务器初始化 - 版本: {SERVER_INFO['version']}")
+logger.info("本地文件读取模式，只支持读取本地文件系统中的文件")
 
 # 创建FastMCP实例，在服务器层面设置版本和描述信息
 mcp = FastMCP(
@@ -120,33 +86,8 @@ mcp = FastMCP(
 )
 
 # 全局文件读取器实例
-file_reader = None
 local_file_reader = None
 
-
-def get_file_reader() -> FileReader:
-    """获取文件读取器实例（HTTP下载模式）"""
-    global file_reader
-    if file_reader is None:
-        # 从环境变量读取配置
-        max_workers = int(os.getenv("FILE_READER_MAX_WORKERS", "5"))
-        min_content_length = int(os.getenv("FILE_READER_MIN_CONTENT_LENGTH", "10"))
-        download_service_url = os.getenv("DOWNLOAD_SERVICE_URL", "http://localhost:8080")
-        download_service_timeout = int(os.getenv("DOWNLOAD_SERVICE_TIMEOUT", "300"))
-        
-        # 创建HTTP下载存储客户端
-        http_storage_client = HTTPDownloadStorageClient(
-            download_service_url=download_service_url,
-            timeout=download_service_timeout
-        )
-        
-        file_reader = FileReader(
-            storage_client=http_storage_client,
-            max_workers=max_workers,
-            min_content_length=min_content_length
-        )
-        logger.info("HTTP下载文件读取器实例已创建")
-    return file_reader
 
 
 def get_local_file_reader() -> FileReader:
@@ -183,10 +124,11 @@ def get_local_file_reader() -> FileReader:
     return local_file_reader
 
 
+# 本地文件读取工具
 @mcp.tool(
-    description="读取文件内容，支持通过HTTP/HTTPS URL和file:///格式下载PDF、Office文档、图像OCR等多种格式",
+    description="读取本地文件系统中的PDF、Office文档（不支持图片）",
     annotations=ToolAnnotations(
-        title="文件内容读取工具",
+        title="本地PDF、Office文档读取工具",
         readOnlyHint=True,
         destructiveHint=False,
         idempotentHint=True,
@@ -194,106 +136,10 @@ def get_local_file_reader() -> FileReader:
         category="file_reader",
     )
 )
-async def read_files(
-    urls: Annotated[List[UrlWithReferer], "文件下载链接数组，支持HTTP/HTTPS URL和file:///格式，每个链接可以指定专属的Referer"],
-    max_size: Annotated[Optional[int], "单个文件大小限制(MB)，为空时默认值为20MB"] = 20,
-    use_proxy: Annotated[bool, "是否使用代理下载文件"] = False,
-    max_retries: Annotated[int, "最大重试次数"] = 3,
-    max_workers: Annotated[int, "最大并发工作线程数"] = 5
+async def read_local_files(
+    file_paths: Annotated[List[str], "本地文件绝对路径数组，必须使用完整的绝对路径(如/Users/user/document.pdf)。支持格式：PDF、Office文档(doc/docx/xls/xlsx/ppt/pptx)、OpenDocument(odt/ods/odp)。不支持图片"],
+    max_size: Annotated[Optional[int], "单个文件大小限制(MB)"] = 20,
 ) -> List[TextContent]:
-    """
-    读取文件内容（通过URL下载或file:///格式）
-    
-    Args:
-        urls: 文件下载链接数组，支持HTTP/HTTPS URL和file:///格式，每个链接可以指定专属的Referer
-        max_size: 文件大小限制(MB)，为空时使用环境变量FILE_READER_MAX_FILE_SIZE_MB的默认值
-        use_proxy: 是否使用代理
-        max_retries: 最大重试次数
-        max_workers: 最大并发工作线程数
-    
-    Returns:
-        包含读取结果的JSON字符串
-    """
-    logger.info(f"收到文件内容读取请求，包含 {len(urls)} 个下载链接")
-    
-    try:
-        # 检查文件数量限制
-        max_files_per_request = int(os.getenv("FILE_READER_MAX_FILES_PER_REQUEST", "10"))
-        if len(urls) > max_files_per_request:
-            logger.error(f"请求文件数量超限: {len(urls)} > {max_files_per_request}")
-            error_response = ReadResponse()
-            for url_item in urls:
-                error_response.add_failure(
-                    url_item.url,
-                    FailureType.OTHER,
-                    f"请求文件数量超限: {len(urls)} > {max_files_per_request}，请分批处理"
-                )
-            return [TextContent(type="text", text=error_response.model_dump_json(indent=2))]
-        
-        # 提取URL列表和构建referer映射
-        url_list = [url_item.url for url_item in urls]
-        referer_map = {}
-        for url_item in urls:
-            if url_item.referer:
-                referer_map[url_item.url] = url_item.referer
-        
-        # 创建读取请求，如果传入了max_size则转换为字节数
-        kwargs = {
-            "resource_ids": url_list,
-            "referer_map": referer_map if referer_map else None,
-            "use_proxy": use_proxy,
-            "max_retries": max_retries,
-            "max_workers": max_workers
-        }
-        if max_size is not None:
-            kwargs["max_size"] = max_size * 1024 * 1024  # 转换MB为字节数
-        
-        request = ReadRequest(**kwargs)
-        
-        # 执行文件读取
-        reader_instance = get_file_reader()
-        response = await reader_instance.read_files(request)
-        
-        logger.info(f"文件读取完成 - 成功: {len(response.contents)}, 失败: {len(response.failed)}")
-        
-        # 返回结果，使用JSON格式
-        return [TextContent(type="text", text=response.model_dump_json(indent=2))]
-        
-    except Exception as e:
-        logger.error(f"文件读取处理失败: {str(e)}")
-        
-        # 创建标准的错误响应格式，与正常响应保持一致
-        error_response = ReadResponse()
-        
-        # 为所有请求的URL添加失败记录
-        for url_item in urls:
-            error_response.add_failure(
-                url_item.url,
-                FailureType.OTHER,
-                f"请求处理异常: {str(e)}"
-            )
-        
-        return [TextContent(type="text", text=error_response.model_dump_json(indent=2))]
-
-
-# 条件性注册本地文件读取工具（仅在非Docker环境下）
-# 说明中去掉图像OCR、文本提取, 这些用 cursor/vscode 自身能力
-if not IS_DOCKER_ENV:
-    @mcp.tool(
-        description="读取本地文件系统中的PDF、Office文档（不支持图片）",
-        annotations=ToolAnnotations(
-            title="本地PDF、Office文档读取工具",
-            readOnlyHint=True,
-            destructiveHint=False,
-            idempotentHint=True,
-            openWorldHint=True,
-            category="file_reader",
-        )
-    )
-    async def read_local_files(
-        file_paths: Annotated[List[str], "本地文件绝对路径数组，必须使用完整的绝对路径(如/Users/user/document.pdf)。支持格式：PDF、Office文档(doc/docx/xls/xlsx/ppt/pptx)、OpenDocument(odt/ods/odp)。不支持图片"],
-        max_size: Annotated[Optional[int], "单个文件大小限制(MB)"] = 20,
-    ) -> List[TextContent]:
         """
         读取本地文件系统中的文件内容（仅支持绝对路径）
         
@@ -425,10 +271,7 @@ def run_server():
         raise
     finally:
         # 清理资源
-        global file_reader, local_file_reader
-        if file_reader:
-            # FileReader没有close方法，这里重置为None
-            file_reader = None
+        global local_file_reader
         if local_file_reader:
-            # LocalFileReader没有close方法，这里重置为None
+            # FileReader没有close方法，这里重置为None
             local_file_reader = None 

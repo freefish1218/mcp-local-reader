@@ -34,7 +34,7 @@ def test_text_parser_cache():
         print(f"   内容长度: {len(result1.content)}")
     else:
         print(f"❌ 第一次解析失败: {result1.error}")
-        return False
+        assert False, f"第一次解析失败: {result1.error}"
     
     # 第二次解析（缓存命中）
     print("📝 第二次解析（缓存命中）...")
@@ -49,9 +49,7 @@ def test_text_parser_cache():
         print(f"   速度提升: {time1/time2:.1f}倍")
     else:
         print(f"❌ 第二次解析失败: {result2.error}")
-        return False
-    
-    return True
+        assert False, f"第二次解析失败: {result2.error}"
 
 
 def test_cache_key_generation():
@@ -80,7 +78,10 @@ def test_cache_key_generation():
     print(f"缓存键4（不同版本）: {key4}")
     print(f"键1和键4不同: {'✅' if key1 != key4 else '❌'}")
     
-    return True
+    # 使用断言而不是return
+    assert key1 == key2, "相同内容应该生成相同的缓存键"
+    assert key1 != key3, "不同内容应该生成不同的缓存键"
+    assert key1 != key4, "不同版本应该生成不同的缓存键"
 
 
 def test_cache_with_config():
@@ -104,7 +105,9 @@ def test_cache_with_config():
     print(f"键1和键2不同: {'✅' if key1 != key2 else '❌'}")
     print(f"键1和键3相同: {'✅' if key1 == key3 else '❌'}")
     
-    return True
+    # 使用断言而不是return
+    assert key1 != key2, "不同配置应该生成不同的缓存键"
+    assert key1 == key3, "相同配置应该生成相同的缓存键"
 
 
 def test_cache_stats():
@@ -127,7 +130,10 @@ def test_cache_stats():
         hit_rate = stats.get('cache_hits', 0) / total_requests
         print(f"  缓存命中率: {hit_rate:.2%}")
     
-    return True
+    # 验证统计数据
+    assert isinstance(stats, dict), "缓存统计应该返回字典"
+    assert 'cache_hits' in stats, "统计应该包含缓存命中数"
+    assert 'cache_misses' in stats, "统计应该包含缓存未命中数"
 
 
 def main():
@@ -151,11 +157,9 @@ def main():
     for test_name, test_func in tests:
         try:
             print(f"\n🔄 运行测试: {test_name}")
-            if test_func():
-                print(f"✅ {test_name} 测试通过")
-                success_count += 1
-            else:
-                print(f"❌ {test_name} 测试失败")
+            test_func()  # 不检查返回值，依赖断言
+            print(f"✅ {test_name} 测试通过")
+            success_count += 1
         except Exception as e:
             print(f"❌ {test_name} 测试出现异常: {e}")
             import traceback

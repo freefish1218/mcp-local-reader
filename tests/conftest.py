@@ -11,9 +11,9 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from file_reader.storage import LocalFileStorageClient, HTTPDownloadStorageClient
+from file_reader.storage import LocalFileStorageClient
 from file_reader import FileReader
-from file_reader.models import ReadRequest, ReadResponse, FailureType
+from file_reader.models import LocalReadRequest, ReadResponse, FailureType
 from file_reader.parsers import PDFParser, OfficeParser, TextParser
 
 # 添加源码路径到系统路径
@@ -35,28 +35,11 @@ def mock_local_client():
 
 
 @pytest.fixture
-def mock_http_client():
-    """创建模拟HTTP下载客户端夹具"""
-    client = Mock(spec=HTTPDownloadStorageClient)
-    return client
-
-
-@pytest.fixture
 def file_reader_local(mock_local_client):
     """创建本地文件读取器实例夹具"""
     return FileReader(
         storage_client=mock_local_client,
         max_workers=2,
-        min_content_length=5
-    )
-
-
-@pytest.fixture
-def file_reader_http(mock_http_client):
-    """创建HTTP下载文件读取器实例夹具"""
-    return FileReader(
-        storage_client=mock_http_client,
-        max_workers=2, 
         min_content_length=5
     )
 
@@ -82,11 +65,10 @@ def sample_docx_content():
 
 
 @pytest.fixture
-def read_request():
-    """创建读取请求夹具"""
-    return ReadRequest(
-        resource_ids=["https://example.com/test1.pdf", "https://example.com/test2.txt", "https://example.com/test3.docx"],
-        referer="https://test.com",
+def local_read_request():
+    """创建本地读取请求夹具"""
+    return LocalReadRequest(
+        file_paths=["test1.pdf", "test2.txt", "test3.docx"],
         max_size=5 * 1024 * 1024  # 5MB
     )
 
@@ -95,8 +77,6 @@ def read_request():
 def mock_env_vars():
     """模拟环境变量"""
     env_vars = {
-        'DOWNLOAD_SERVICE_URL': 'http://localhost:8080',
-        'DOWNLOAD_SERVICE_TIMEOUT': '300',
         'OPENAI_API_KEY': 'test_openai_key',
         'OPENAI_BASE_URL': 'https://api.openai.com/v1',
         'OPENAI_MODEL': 'gpt-4o',

@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 from file_reader.storage import LocalFileStorageClient
 from file_reader.core import FileReader
-from file_reader.models import ReadRequest
+from file_reader.models import LocalReadRequest
 
 
 async def test_improved_error_messages():
