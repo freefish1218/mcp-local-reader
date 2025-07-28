@@ -15,8 +15,8 @@ from ..llm_util import get_llm
 class ImageParser(BaseParser):
     """图像文件解析器，使用多模态LLM进行OCR，输出Markdown格式"""
 
-    def __init__(self, storage_client=None):
-        super().__init__(storage_client=storage_client)
+    def __init__(self):
+        super().__init__()
         self.parser_version = "1.3"  # 更新解析器版本：支持Markdown输出
         
         # 初始化LLM客户端

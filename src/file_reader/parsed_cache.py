@@ -35,13 +35,6 @@ class ParsedContentCache:
         
         self.logger.info(f"解析结果缓存初始化完成 - 目录: {cache_dir}, 大小: {cache_size_mb}MB, 有效期: {self.expire_days}天")
         
-        # 统计信息
-        self.stats = {
-            "cache_hits": 0,
-            "cache_misses": 0,
-            "cache_writes": 0,
-            "cache_errors": 0
-        }
 
     def get_cache_key(self, file_content: bytes, parser_name: str, parser_version: str, 
                      parse_config: Optional[Dict[str, Any]] = None) -> str:
@@ -87,15 +80,12 @@ class ParsedContentCache:
             cached_data = self.cache.get(cache_key)
             if cached_data:
                 self.logger.debug(f"解析结果缓存命中: {cache_key}")
-                self.stats["cache_hits"] += 1
                 return cached_data
             else:
                 self.logger.debug(f"解析结果缓存未命中: {cache_key}")
-                self.stats["cache_misses"] += 1
                 return None
         except Exception as e:
             self.logger.warning(f"获取缓存失败: {cache_key}, 错误: {e}")
-            self.stats["cache_errors"] += 1
             return None
 
     def cache_parse_result(self, cache_key: str, parse_result: Dict[str, Any], 
@@ -130,12 +120,10 @@ class ParsedContentCache:
             self.cache.set(cache_key, cache_data, expire=self.expire_seconds)
             
             self.logger.debug(f"解析结果已缓存: {cache_key}, 内容长度: {cache_data['content_length']}")
-            self.stats["cache_writes"] += 1
             return True
             
         except Exception as e:
             self.logger.warning(f"缓存解析结果失败: {cache_key}, 错误: {e}")
-            self.stats["cache_errors"] += 1
             return False
 
     def clear_cache(self):
@@ -168,79 +156,6 @@ class ParsedContentCache:
         except Exception as e:
             self.logger.error(f"清理解析器缓存失败: {parser_name}, 错误: {e}")
 
-    def get_cache_stats(self) -> Dict[str, Any]:
-        """
-        获取缓存统计信息
-        
-        Returns:
-            缓存统计数据
-        """
-        try:
-            # 基础统计
-            total_items = len(self.cache) if self.cache else 0
-            total_size = 0
-            parser_stats = {}
-            doc_type_stats = {}
-            
-            # 遍历缓存项统计详细信息
-            if self.cache:
-                for key in self.cache:
-                    try:
-                        cached_data = self.cache.get(key)
-                        if cached_data:
-                            content_length = cached_data.get('content_length', 0)
-                            total_size += content_length
-                            
-                            # 按解析器统计
-                            parser_name = cached_data.get('parser_name', 'unknown')
-                            if parser_name not in parser_stats:
-                                parser_stats[parser_name] = {"count": 0, "total_size": 0}
-                            parser_stats[parser_name]["count"] += 1
-                            parser_stats[parser_name]["total_size"] += content_length
-                            
-                            # 按文档类型统计
-                            doc_type = cached_data.get('doc_type', 'unknown')
-                            if doc_type not in doc_type_stats:
-                                doc_type_stats[doc_type] = {"count": 0, "total_size": 0}
-                            doc_type_stats[doc_type]["count"] += 1
-                            doc_type_stats[doc_type]["total_size"] += content_length
-                            
-                    except Exception as e:
-                        self.logger.debug(f"统计缓存项失败: {key}, 错误: {e}")
-            
-            # 计算命中率
-            total_requests = self.stats["cache_hits"] + self.stats["cache_misses"]
-            hit_rate = self.stats["cache_hits"] / total_requests if total_requests > 0 else 0
-            
-            return {
-                "total_items": total_items,
-                "total_content_size": total_size,
-                "cache_hits": self.stats["cache_hits"],
-                "cache_misses": self.stats["cache_misses"],
-                "cache_writes": self.stats["cache_writes"],
-                "cache_errors": self.stats["cache_errors"],
-                "cache_hit_rate": hit_rate,
-                "parser_stats": parser_stats,
-                "doc_type_stats": doc_type_stats,
-                "cache_directory": str(self.cache.directory) if hasattr(self.cache, 'directory') else None,
-                "cache_size_limit": getattr(self.cache, 'size_limit', 0),
-                "expire_days": self.expire_days
-            }
-            
-        except Exception as e:
-            self.logger.error(f"获取缓存统计失败: {e}")
-            return {
-                "total_items": 0,
-                "total_content_size": 0,
-                "cache_hits": self.stats["cache_hits"],
-                "cache_misses": self.stats["cache_misses"],
-                "cache_writes": self.stats["cache_writes"],
-                "cache_errors": self.stats["cache_errors"],
-                "cache_hit_rate": 0,
-                "parser_stats": {},
-                "doc_type_stats": {},
-                "error": str(e)
-            }
 
 
 # 全局解析缓存实例

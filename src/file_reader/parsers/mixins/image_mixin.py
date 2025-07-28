@@ -12,28 +12,15 @@ from ...image_cache import ImageCacheManager
 class ImageProcessingMixin:
     """图片处理混入类，为解析器提供图片缓存和处理能力"""
     
-    def __init__(self, storage_client=None):
+    def __init__(self):
         """
         初始化图片处理混入
-        
-        Args:
-            storage_client: 存储客户端，用于上传图片到存储服务
         """
-        # 获取或创建图片缓存管理器（支持存储客户端）
+        # 获取或创建图片缓存管理器
         if not hasattr(self, '_image_cache_manager'):
-            self._image_cache_manager = ImageCacheManager(storage_client=storage_client)
+            from ...image_cache import get_image_cache_manager
+            self._image_cache_manager = get_image_cache_manager()
     
-    def set_storage_client(self, storage_client):
-        """
-        设置存储客户端
-        
-        Args:
-            storage_client: 存储客户端实例
-        """
-        if hasattr(self, '_image_cache_manager'):
-            self._image_cache_manager.storage_client = storage_client
-        else:
-            self._image_cache_manager = ImageCacheManager(storage_client=storage_client)
     
     def process_document_images(self, markdown_content: str, temp_image_dir: str, 
                               doc_type: str, source_file_path: str = None) -> Tuple[str, List[Dict[str, Any]]]:
@@ -76,23 +63,6 @@ class ImageProcessingMixin:
     
 
     
-    def get_image_cache_stats(self) -> Dict[str, Any]:
-        """
-        获取图片缓存统计信息
-        
-        Returns:
-            缓存统计信息字典
-        """
-        return self._image_cache_manager.get_cache_stats()
-    
-    def get_image_upload_stats(self) -> Dict[str, Any]:
-        """
-        获取图片上传统计信息
-        
-        Returns:
-            上传统计信息字典
-        """
-        return self._image_cache_manager.get_upload_stats()
     
     def clear_image_cache(self):
         """清空图片缓存"""

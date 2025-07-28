@@ -17,7 +17,7 @@ from .parsed_cache import get_parsed_cache
 class FileReader:
     """
     文件读取器核心类
-    负责批量下载文件并提取文本内容，支持HTTP下载和本地文件模式
+    负责本地文件读取并提取文本内容
     """
     
     def __init__(
@@ -31,7 +31,7 @@ class FileReader:
         初始化文件读取器
         
         Args:
-            storage_client: 存储客户端（HTTP下载或本地文件）
+            storage_client: 存储客户端（本地文件）
             max_workers: 最大并发工作线程数
             max_file_size: 最大文件大小限制（字节），为None时不设置额外限制
             min_content_length: 最小内容长度
@@ -49,13 +49,13 @@ class FileReader:
         # 初始化解析缓存
         self.parsed_cache = get_parsed_cache()
         
-        # 初始化解析器（传递存储客户端，用于图片上传）
+        # 初始化解析器
         self.parsers = {
-            'pdf': PDFParser(storage_client=self.storage_client),
-            'office': OfficeParser(storage_client=self.storage_client),
-            'text': TextParser(storage_client=self.storage_client),
-            'image': ImageParser(storage_client=self.storage_client),
-            'archive': ArchiveParser(storage_client=self.storage_client)
+            'pdf': PDFParser(),
+            'office': OfficeParser(),
+            'text': TextParser(),
+            'image': ImageParser(),
+            'archive': ArchiveParser()
         }
         
         # 文件类型到解析器的映射
@@ -96,18 +96,9 @@ class FileReader:
             '.tbz2': 'archive'
         }
         
-        # 统计信息
-        self.stats = {
-            "total_requests": 0,
-            "successful_reads": 0,
-            "failed_reads": 0,
-            "total_files_processed": 0,
-            "total_content_size": 0,
-            "cache_hits": 0
-        }
         
         max_file_size_str = format_file_size(self.max_file_size) if self.max_file_size else "由请求控制"
-        self.logger.info(f"文件读取器初始化完成 - HTTP批量下载模式, 最大并发: {max_workers}, 最大文件大小: {max_file_size_str}")
+        self.logger.info(f"文件读取器初始化完成 - 本地文件模式, 最大并发: {max_workers}, 最大文件大小: {max_file_size_str}")
     
     def _normalize_and_validate_url(self, url: str) -> tuple[str, Optional[str]]:
         """
@@ -166,14 +157,12 @@ class FileReader:
         Returns:
             读取响应结果
         """
-        self.stats["total_requests"] += 1
         # 获取资源ID列表（兼容 LocalReadRequest 和其他请求格式）
         if hasattr(request, 'file_paths'):
             resource_ids = request.file_paths
         else:
             resource_ids = request.resource_ids
             
-        self.stats["total_files_processed"] += len(resource_ids)
         
         self.logger.info(f"开始批量处理文件读取请求，包含 {len(resource_ids)} 个文件")
         
@@ -189,7 +178,6 @@ class FileReader:
             if error_message:
                 self.logger.warning(f"无效的URL: {original_url}, 错误: {error_message}")
                 response.add_failure(original_url, FailureType.INVALID_URL, error_message)
-                self.stats["failed_reads"] += 1
                 continue
             
             normalized_urls.append(normalized_url)
@@ -211,7 +199,6 @@ class FileReader:
             cached_content = await self._check_parsed_cache(url, request)
             if cached_content:
                 cached_results[url] = cached_content
-                self.stats["cache_hits"] += 1
                 self.logger.debug(f"解析缓存命中: {url}")
             else:
                 urls_need_download.append(url)
@@ -223,8 +210,6 @@ class FileReader:
             for url, content in cached_results.items():
                 original_url = url_mapping[url]  # 使用原始URL作为响应key
                 response.add_content(original_url, content)
-                self.stats["successful_reads"] += 1
-                self.stats["total_content_size"] += len(content)
             return response
         
         # 创建下载请求参数
@@ -257,8 +242,6 @@ class FileReader:
         for url, content in cached_results.items():
             original_url = url_mapping[url]  # 使用原始URL作为响应key
             response.add_content(original_url, content)
-            self.stats["successful_reads"] += 1
-            self.stats["total_content_size"] += len(content)
         
         # 第四步：并发处理读取的文件
         tasks = []
@@ -287,19 +270,14 @@ class FileReader:
             if isinstance(result, Exception):
                 self.logger.error(f"处理文件时发生异常: {original_url}, 错误: {result}")
                 response.add_failure(original_url, FailureType.OTHER, f"处理异常: {str(result)}")
-                self.stats["failed_reads"] += 1
             elif result is None:
                 response.add_failure(original_url, FailureType.OTHER, "处理结果为空")
-                self.stats["failed_reads"] += 1
             elif isinstance(result, tuple):
                 success, content_or_error, error_type = result
                 if success:
                     response.add_content(original_url, content_or_error)
-                    self.stats["successful_reads"] += 1
-                    self.stats["total_content_size"] += len(content_or_error)
                 else:
                     response.add_failure(original_url, error_type, content_or_error)
-                    self.stats["failed_reads"] += 1
         
         self.logger.info(f"批量文件读取完成 - 成功: {len(response.contents)} (缓存: {len(cached_results)}, 新解析: {len(response.contents) - len(cached_results)}), 失败: {len(response.failed)}")
         return response
@@ -426,60 +404,6 @@ class FileReader:
             self.logger.debug(f"从resource_id提取扩展名失败: {resource_id}, 错误: {e}")
             return None
     
-    def get_stats(self) -> Dict[str, Any]:
-        """
-        获取统计信息
-        
-        Returns:
-            统计信息字典
-        """
-        storage_stats = self.storage_client.get_stats()
-        
-        # 收集图片上传统计信息
-        image_upload_stats = {}
-        file_upload_stats = {}
-        for parser_name, parser in self.parsers.items():
-            if hasattr(parser, 'get_image_upload_stats'):
-                parser_upload_stats = parser.get_image_upload_stats()
-                if parser_upload_stats['total_uploads'] > 0:
-                    image_upload_stats[parser_name] = parser_upload_stats
-            
-            # 收集文件上传统计信息（压缩包文件）
-            if hasattr(parser, 'get_file_upload_stats'):
-                parser_file_stats = parser.get_file_upload_stats()
-                if parser_file_stats['total_uploads'] > 0:
-                    file_upload_stats[parser_name] = parser_file_stats
-        
-        stats_result = {
-            "file_reader": {
-                "total_requests": self.stats["total_requests"],
-                "successful_reads": self.stats["successful_reads"],
-                "failed_reads": self.stats["failed_reads"],
-                "success_rate": (
-                    self.stats["successful_reads"] / max(self.stats["total_files_processed"], 1)
-                ),
-                "total_files_processed": self.stats["total_files_processed"],
-                "total_content_size": self.stats["total_content_size"],
-                "average_content_size": (
-                    self.stats["total_content_size"] / max(self.stats["successful_reads"], 1)
-                )
-            },
-            "storage": storage_stats,
-            "parsers": {
-                parser_name: parser.__class__.__name__ 
-                for parser_name, parser in self.parsers.items()
-            }
-        }
-        
-        # 如果有图片上传统计，添加到结果中
-        if image_upload_stats:
-            stats_result["image_upload"] = image_upload_stats
-            
-        # 如果有文件上传统计，添加到结果中
-        if file_upload_stats:
-            stats_result["file_upload"] = file_upload_stats
-        
-        return stats_result
     
     def clear_cache(self):
         """清除缓存"""

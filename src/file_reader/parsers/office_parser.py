@@ -25,10 +25,9 @@ from .utils.file_utils import FileManager, FormatChecker, ResultBuilder
 class OfficeParser(BaseParser, ImageProcessingMixin):
     """Office文档解析器，混合策略输出Markdown格式"""
 
-    def __init__(self, storage_client=None):
+    def __init__(self):
         """初始化Office解析器"""
-        BaseParser.__init__(self, storage_client=storage_client)
-        ImageProcessingMixin.__init__(self, storage_client=storage_client)
+        BaseParser.__init__(self)
         self.parser_version = "2.0"  # 更新解析器版本
         
         # 初始化工具类

@@ -22,17 +22,14 @@ class BaseParser(ImageProcessingMixin, ABC):
     所有具体解析器都应继承此类并实现 parse 方法
     """
     
-    def __init__(self, storage_client=None):
+    def __init__(self):
         """
         初始化解析器
-        
-        Args:
-            storage_client: 存储客户端，用于上传解析出的图片
         """
         self.logger = get_logger(f"parser.{self.__class__.__name__}")
         
-        # 初始化图片处理混入（传递存储客户端）
-        super().__init__(storage_client=storage_client)
+        # 初始化图片处理混入
+        super().__init__()
         
         # 解析器信息
         self.parser_name = self.__class__.__name__.replace("Parser", "").lower()
@@ -40,20 +37,7 @@ class BaseParser(ImageProcessingMixin, ABC):
         
         # 解析缓存
         self.parsed_cache = get_parsed_cache()
-        
-        # 存储客户端（用于图片上传）
-        self.storage_client = storage_client
     
-    def set_storage_client(self, storage_client):
-        """
-        设置存储客户端
-        
-        Args:
-            storage_client: 存储客户端实例
-        """
-        self.storage_client = storage_client
-        # 同时更新图片处理混入的存储客户端
-        super().set_storage_client(storage_client)
     
     def parse(self, content: bytes, file_extension: str = None, **kwargs) -> ParseResult:
         """

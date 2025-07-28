@@ -72,17 +72,6 @@ class LocalFileStorageClient(BaseStorageClient):
         self.logger.info(f"允许绝对路径: {self.allow_absolute_paths}")
         self.logger.info(f"缓存配置 - 目录: {cache_directory}, 大小: {cache_size_mb}MB")
         
-        # 统计信息
-        self.stats = {
-            "reads": 0,
-            "cache_hits": 0,
-            "cache_misses": 0,
-            "total_size": 0,
-            "errors": 0
-        }
-        
-        # 用于存储最后一次错误信息
-        self._last_error = None
     
     def get_file_info(self, file_path: str, headers: Dict[str, str] = None) -> Optional[Dict[str, Any]]:
         """
@@ -221,33 +210,6 @@ class LocalFileStorageClient(BaseStorageClient):
         combined = "|".join(key_components)
         return hashlib.md5(combined.encode()).hexdigest()
     
-    def get_stats(self) -> Dict[str, Any]:
-        """
-        获取本地文件存储统计信息
-        
-        Returns:
-            统计信息字典
-        """
-        try:
-            cache_stats = {
-                "size": len(self.cache),
-                "volume": self.cache.volume(),
-                "hits": getattr(self.cache, 'stats', {}).get('hits', 0),
-                "misses": getattr(self.cache, 'stats', {}).get('misses', 0)
-            }
-        except Exception:
-            cache_stats = {"error": "无法获取缓存统计"}
-        
-        return {
-            "storage_type": "local_file",
-            "file_operations": self.stats,
-            "cache": cache_stats,
-            "configuration": {
-                "allowed_directories": self.allowed_directories,
-                "allow_absolute_paths": self.allow_absolute_paths,
-                "max_file_size": self.max_file_size
-            }
-        }
     
     def clear_cache(self):
         """清除本地文件缓存"""

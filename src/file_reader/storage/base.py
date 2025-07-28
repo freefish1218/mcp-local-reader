@@ -10,13 +10,7 @@ class BaseStorageClient(ABC):
     """存储客户端基类"""
     
     def __init__(self):
-        self.stats = {
-            "total_operations": 0,
-            "successful_operations": 0,
-            "failed_operations": 0,
-            "total_size": 0,
-            "errors": 0
-        }
+        pass
     
     @abstractmethod
     def get_file_info(self, resource_id: str, headers: Dict[str, str] = None) -> Optional[Dict[str, Any]]:
@@ -32,15 +26,6 @@ class BaseStorageClient(ABC):
         """
         pass
     
-    @abstractmethod
-    def get_stats(self) -> Dict[str, Any]:
-        """
-        获取统计信息
-        
-        Returns:
-            统计信息字典
-        """
-        pass
     
     @abstractmethod
     def clear_cache(self):

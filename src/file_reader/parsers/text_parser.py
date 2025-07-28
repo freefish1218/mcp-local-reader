@@ -11,8 +11,8 @@ from ..models import ParseResult
 class TextParser(BaseParser):
     """文本文件解析器"""
     
-    def __init__(self, storage_client=None):
-        super().__init__(storage_client=storage_client)
+    def __init__(self):
+        super().__init__()
         self.parser_version = "1.1"  # 更新解析器版本
 
     def _parse_content(self, content: bytes, file_extension: str = None) -> ParseResult:

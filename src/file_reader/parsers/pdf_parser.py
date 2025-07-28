@@ -18,9 +18,9 @@ from ..models import ParseResult
 class PDFParser(BaseParser):
     """PDF文档解析器，使用PyMuPDF4LLM解析为Markdown格式，支持图片提取和缓存"""
 
-    def __init__(self, storage_client=None):
+    def __init__(self):
         """初始化PDF解析器"""
-        super().__init__(storage_client=storage_client)
+        super().__init__()
         self.parser_version = "2.1"  # 更新解析器版本
 
     def _parse_content(self, content: bytes, file_extension: str = None) -> ParseResult:

@@ -18,10 +18,10 @@ from .utils.archive_utils import ArchiveExtractor
 class ArchiveParser(BaseParser, FileProcessingMixin):
     """压缩文件解析器，解包并输出文件树Markdown格式"""
 
-    def __init__(self, storage_client=None):
+    def __init__(self):
         """初始化压缩文件解析器"""
-        BaseParser.__init__(self, storage_client=storage_client)
-        FileProcessingMixin.__init__(self, storage_client=storage_client)
+        BaseParser.__init__(self)
+        FileProcessingMixin.__init__(self)
         self.parser_version = "1.0"
         
         # 初始化压缩文件提取器

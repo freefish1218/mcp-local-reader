@@ -19,12 +19,6 @@ class TestFileReader:
         """创建mock存储客户端"""
         mock_client = Mock(spec=LocalFileStorageClient)
         mock_client.get_files_batch = AsyncMock()
-        mock_client.get_stats.return_value = {
-            "reads": 0,
-            "cache_hits": 0, 
-            "total_size": 0,
-            "errors": 0
-        }
         mock_client.clear_cache = Mock()
         return mock_client
     
@@ -51,7 +45,7 @@ class TestFileReader:
         )
         
         # 执行读取
-        response = await file_reader.read_local_files(request)
+        response = await file_reader.read_files(request)
         
         # 验证结果
         assert len(response.contents) == 1
@@ -80,7 +74,7 @@ class TestFileReader:
         )
         
         # 执行读取
-        response = await file_reader.read_local_files(request)
+        response = await file_reader.read_files(request)
         
         # 验证结果
         assert len(response.contents) == 0
@@ -105,7 +99,7 @@ class TestFileReader:
         )
         
         # 执行读取
-        response = await file_reader.read_local_files(request)
+        response = await file_reader.read_files(request)
         
         # 验证结果 - 应该因为大小超限而失败或被处理
         # 具体行为取决于实现，这里测试结构完整性
@@ -119,7 +113,7 @@ class TestFileReader:
         request = LocalReadRequest(file_paths=[])
         
         # 执行读取
-        response = await file_reader.read_local_files(request)
+        response = await file_reader.read_files(request)
         
         # 验证结果
         assert len(response.contents) == 0
@@ -152,28 +146,13 @@ class TestFileReader:
         )
         
         # 执行读取
-        response = await file_reader.read_local_files(request)
+        response = await file_reader.read_files(request)
         
         # 验证结果
         assert len(response.contents) == 1
         assert len(response.failed) == 1
         assert response.contents[0].resource_id == "success.txt"
         assert response.failed[0].resource_id == "failed.txt"
-    
-    def test_get_stats(self, file_reader, mock_storage_client):
-        """测试获取统计信息"""
-        expected_stats = {
-            "reads": 5,
-            "cache_hits": 3,
-            "total_size": 1024,
-            "errors": 1
-        }
-        mock_storage_client.get_stats.return_value = expected_stats
-        
-        stats = file_reader.get_stats()
-        
-        assert stats == expected_stats
-        mock_storage_client.get_stats.assert_called_once()
     
     def test_clear_cache(self, file_reader, mock_storage_client):
         """测试清理缓存"""
