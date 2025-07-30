@@ -4,9 +4,9 @@
 """
 
 import asyncio
-from typing import List, Dict, Any, Optional
+from typing import Optional
 
-from .models import ReadResponse, FailureType, LocalReadRequest
+from .models import ReadResponse, FailureType
 from .storage import LocalFileStorageClient, BaseStorageClient
 from .parsers import PDFParser, OfficeParser, TextParser, ImageParser, ArchiveParser
 from .utils import get_logger, format_file_size
@@ -23,7 +23,6 @@ class FileReader:
     def __init__(
         self,
         storage_client: Optional[BaseStorageClient] = None,
-        max_workers: int = 5,
         max_file_size: int = None,  # 已简化，不再处理环境变量，依赖模型层默认值
         min_content_length: int = 10
     ):
@@ -32,7 +31,6 @@ class FileReader:
         
         Args:
             storage_client: 存储客户端（本地文件）
-            max_workers: 最大并发工作线程数
             max_file_size: 最大文件大小限制（字节），为None时不设置额外限制
             min_content_length: 最小内容长度
         """
@@ -42,7 +40,6 @@ class FileReader:
         self.storage_client = storage_client or LocalFileStorageClient()
         
         # 配置参数
-        self.max_workers = max_workers
         self.max_file_size = max_file_size  # 可以为None，由请求级别的max_size控制
         self.min_content_length = min_content_length
         
@@ -98,7 +95,7 @@ class FileReader:
         
         
         max_file_size_str = format_file_size(self.max_file_size) if self.max_file_size else "由请求控制"
-        self.logger.info(f"文件读取器初始化完成 - 本地文件模式, 最大并发: {max_workers}, 最大文件大小: {max_file_size_str}")
+        self.logger.info(f"文件读取器初始化完成 - 本地文件模式, 最大文件大小: {max_file_size_str}")
     
     def _normalize_and_validate_url(self, url: str) -> tuple[str, Optional[str]]:
         """
@@ -147,154 +144,59 @@ class FileReader:
         
         return normalized_url, None
 
-    async def read_files(self, request) -> ReadResponse:
+    async def read_file(self, request) -> ReadResponse:
         """
-        批量读取文件内容
+        读取单个文件内容
         
         Args:
-            request: 文件读取请求（LocalReadRequest 或包含 resource_ids 的对象）
+            request: 文件读取请求（LocalReadRequest）
             
         Returns:
             读取响应结果
         """
-        # 获取资源ID列表（兼容 LocalReadRequest 和其他请求格式）
-        if hasattr(request, 'file_paths'):
-            resource_ids = request.file_paths
-        else:
-            resource_ids = request.resource_ids
-            
-        
-        self.logger.info(f"开始批量处理文件读取请求，包含 {len(resource_ids)} 个文件")
+        file_path = request.file_paths[0]
+        self.logger.info(f"开始处理文件读取请求: {file_path}")
         
         response = ReadResponse()
         
-        # 第一步：URL标准化和验证
-        normalized_urls = []
-        url_mapping = {}  # 原始URL到标准化URL的映射
-        
-        for original_url in resource_ids:
-            normalized_url, error_message = self._normalize_and_validate_url(original_url)
-            
-            if error_message:
-                self.logger.warning(f"无效的URL: {original_url}, 错误: {error_message}")
-                response.add_failure(original_url, FailureType.INVALID_URL, error_message)
-                continue
-            
-            normalized_urls.append(normalized_url)
-            url_mapping[normalized_url] = original_url
-            
-            # 如果URL被标准化了（去除了空格、跟踪参数等），记录日志
-            if normalized_url != original_url:
-                self.logger.debug(f"URL标准化: '{original_url}' -> '{normalized_url}'")
-        
-        if not normalized_urls:
-            self.logger.warning("所有URL都无效，返回空结果")
+        # URL标准化和验证
+        normalized_url, error_message = self._normalize_and_validate_url(file_path)
+        if error_message:
+            self.logger.warning(f"无效的URL: {file_path}, 错误: {error_message}")
+            response.add_failure(file_path, FailureType.INVALID_URL, error_message)
             return response
         
-        # 第二步：检查解析缓存，分离需要下载的URL
-        cached_results = {}
-        urls_need_download = []
-        
-        for url in normalized_urls:
-            cached_content = await self._check_parsed_cache(url, request)
-            if cached_content:
-                cached_results[url] = cached_content
-                self.logger.debug(f"解析缓存命中: {url}")
-            else:
-                urls_need_download.append(url)
-                self.logger.debug(f"解析缓存未命中，需要下载: {url}")
-        
-        # 如果所有文件都有缓存，直接返回
-        if not urls_need_download:
-            self.logger.info(f"所有 {len(normalized_urls)} 个文件都有解析缓存，无需下载")
-            for url, content in cached_results.items():
-                original_url = url_mapping[url]  # 使用原始URL作为响应key
-                response.add_content(original_url, content)
+        # 检查解析缓存
+        cached_content = await self._check_parsed_cache(normalized_url, request)
+        if cached_content:
+            self.logger.info(f"解析缓存命中: {file_path}")
+            response.add_content(file_path, cached_content)
             return response
+            
+        self.logger.info(f"解析缓存未命中，需要读取和解析: {file_path}")
         
-        # 创建下载请求参数
-        download_request = {
-            "resource_ids": urls_need_download,
-            "max_size": getattr(request, 'max_size', 20 * 1024 * 1024),
-            "max_workers": getattr(request, 'max_workers', 3)
-        }
-        
-        self.logger.info(f"解析缓存命中: {len(cached_results)} 个，需要下载: {len(urls_need_download)} 个")
-        
-        # 第二步：读取缓存未命中的文件
-        self.logger.debug("使用本地文件读取模式")
-        
-        # 创建简单的文件读取结果
-        file_results = {}  # url -> bytes content
-        
-        # 对每个文件路径直接读取
-        for file_path in urls_need_download:
-            try:
-                with open(file_path, 'rb') as f:
-                    file_content = f.read()
-                file_results[file_path] = file_content
-                self.logger.debug(f"成功读取本地文件: {file_path}, 大小: {len(file_content)}字节")
-            except Exception as e:
-                self.logger.error(f"读取本地文件失败: {file_path}, 错误: {e}")
-                # 本地文件读取失败，不添加到结果中
-        
-        # 第三步：将缓存结果添加到响应中
-        for url, content in cached_results.items():
-            original_url = url_mapping[url]  # 使用原始URL作为响应key
-            response.add_content(original_url, content)
-        
-        # 第四步：并发处理读取的文件
-        tasks = []
+        # 读取文件
+        try:
+            with open(normalized_url, 'rb') as f:
+                file_content = f.read()
+            self.logger.debug(f"成功读取本地文件: {normalized_url}, 大小: {len(file_content)}字节")
+        except Exception as e:
+            self.logger.error(f"读取本地文件失败: {normalized_url}, 错误: {e}")
+            response.add_failure(file_path, FailureType.OTHER, f"文件读取失败: {e}")
+            return response
+            
+        # 处理文件内容
         max_size = getattr(request, 'max_size', 20 * 1024 * 1024)
+        success, content_or_error, error_type = await self._process_file_content(
+            normalized_url, file_content, max_size
+        )
         
-        for normalized_url in urls_need_download:
-            file_content = file_results.get(normalized_url)
-            original_url = url_mapping[normalized_url]  # 获取对应的原始URL
+        if success:
+            response.add_content(file_path, content_or_error)
+        else:
+            response.add_failure(file_path, error_type, content_or_error)
             
-            if file_content:
-                self.logger.debug(f"找到读取的文件: {normalized_url}, 大小: {len(file_content)}字节")
-                task = self._process_file_content(normalized_url, file_content, max_size)
-            else:
-                self.logger.warning(f"未找到读取的文件: {original_url}")
-                task = self._create_failed_task(original_url, "文件读取失败", FailureType.OTHER)
-            tasks.append(task)
-        
-        # 等待所有任务完成
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        
-        # 处理读取结果
-        for i, result in enumerate(results):
-            normalized_url = urls_need_download[i]
-            original_url = url_mapping[normalized_url]
-            
-            if isinstance(result, Exception):
-                self.logger.error(f"处理文件时发生异常: {original_url}, 错误: {result}")
-                response.add_failure(original_url, FailureType.OTHER, f"处理异常: {str(result)}")
-            elif result is None:
-                response.add_failure(original_url, FailureType.OTHER, "处理结果为空")
-            elif isinstance(result, tuple):
-                success, content_or_error, error_type = result
-                if success:
-                    response.add_content(original_url, content_or_error)
-                else:
-                    response.add_failure(original_url, error_type, content_or_error)
-        
-        self.logger.info(f"批量文件读取完成 - 成功: {len(response.contents)} (缓存: {len(cached_results)}, 新解析: {len(response.contents) - len(cached_results)}), 失败: {len(response.failed)}")
         return response
-    
-    async def _create_failed_task(self, resource_id: str, error_message: str, error_type: FailureType) -> tuple:
-        """
-        创建一个返回失败结果的任务
-        
-        Args:
-            resource_id: 资源ID
-            error_message: 错误信息
-            error_type: 错误类型
-            
-        Returns:
-            失败结果元组
-        """
-        return (False, error_message, error_type)
     
     async def _process_file_content(self, resource_id: str, file_content: bytes, max_size: int) -> Optional[tuple]:
         """
@@ -429,7 +331,11 @@ class FileReader:
             if hasattr(self.storage_client, '_get_cache_key') and hasattr(self.storage_client, 'cache'):
                 # HTTP下载模式 - 检查下载缓存
                 try:
-                    cache_key = self.storage_client._get_cache_key(url, request)
+                    # 为LocalFileStorageClient只传入文件路径参数
+                    if hasattr(self.storage_client, '__class__') and 'LocalFileStorageClient' in str(self.storage_client.__class__):
+                        cache_key = self.storage_client._get_cache_key(url)
+                    else:
+                        cache_key = self.storage_client._get_cache_key(url, request)
                     cached_data = self.storage_client.cache.get(cache_key)
                     
                     if cached_data and isinstance(cached_data, dict) and "content" in cached_data:

@@ -63,7 +63,6 @@ def get_local_file_reader() -> FileReader:
     global local_file_reader
     if local_file_reader is None:
         # 从环境变量读取配置
-        max_workers = int(os.getenv("FILE_READER_MAX_WORKERS", "5"))
         min_content_length = int(os.getenv("FILE_READER_MIN_CONTENT_LENGTH", "10"))
         
         # 本地文件存储客户端配置
@@ -85,7 +84,6 @@ def get_local_file_reader() -> FileReader:
         
         local_file_reader = FileReader(
             storage_client=local_storage_client,
-            max_workers=max_workers,
             min_content_length=min_content_length
         )
         logger.info("本地文件读取器实例已创建")
