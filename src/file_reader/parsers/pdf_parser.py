@@ -6,8 +6,6 @@ PDF文档解析器
 import os
 import tempfile
 import shutil
-from pathlib import Path
-from typing import Dict, Any
 
 import pymupdf4llm
 
@@ -21,14 +19,11 @@ class PDFParser(BaseParser):
     def __init__(self):
         """初始化PDF解析器"""
         super().__init__()
-        self.parser_version = "2.2"  # 更新解析器版本
-        self.pandoc_converter = PandocConverter()
+        self.parser_version = "2.1"  # 更新解析器版本
 
     def _parse_content(self, content: bytes, file_extension: str = None) -> ParseResult:
         """
-        解析PDF文档，采用两步策略：
-        1. 快速解析 (PyMuPDF4LLM)
-        2. 深度解析 (Pandoc)
+        解析PDF文档
         
         Args:
             content: PDF文件内容字节数据
@@ -39,80 +34,14 @@ class PDFParser(BaseParser):
         """
         if file_extension and file_extension.lower() != '.pdf':
             self.logger.warning(f"文件扩展名不匹配PDF: {file_extension}")
-
-        # 第一步：使用PyMuPDF4LLM进行快速解析
-        self.logger.info("第一步：使用PyMuPDF4LLM解析PDF...")
-        pymupdf_result = self._parse_with_pymupdf4llm(content)
-
-        # 检查快速解析的结果
-        # 如果成功并且内容不为空，直接返回
-        if pymupdf_result.success and pymupdf_result.content and pymupdf_result.content.strip():
-            self.logger.info("PyMuPDF4LLM解析成功并返回有效内容。")
-            return pymupdf_result
-
-        # 如果PyMuPDF4LLM失败或内容为空，则启动第二步
-        self.logger.warning("PyMuPDF4LLM未能提取有效内容，启动第二步：使用Pandoc进行深度解析。")
-
-        # 第二步：使用Pandoc进行深度解析
+        
         try:
-            pandoc_result = self._parse_with_pandoc(content)
-            if pandoc_result.success and pandoc_result.content and pandoc_result.content.strip():
-                self.logger.info("Pandoc解析成功并返回有效内容。")
-                return pandoc_result
-            else:
-                # 如果Pandoc也失败了，返回最初PyMuPDF的失败结果
-                self.logger.error("Pandoc也未能提取有效内容，返回初始错误。")
-                return pymupdf_result
+            self.logger.info("使用PyMuPDF4LLM解析PDF为Markdown")
+            return self._parse_with_pymupdf4llm(content)
+                
         except Exception as e:
-            self.logger.error(f"Pandoc解析过程中发生异常: {e}")
-            # 如果Pandoc执行异常，同样返回最初PyMuPDF的失败结果
-            return pymupdf_result
-
-    def _parse_with_pandoc(self, content: bytes) -> ParseResult:
-        """
-        使用Pandoc作为后备方案解析PDF。
-
-        Args:
-            content: PDF文件内容的字节数据。
-
-        Returns:
-            解析结果对象。
-        """
-        temp_pdf_path = None
-        try:
-            # Pandoc需要一个文件路径，所以我们创建一个临时文件
-            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_pdf:
-                temp_pdf.write(content)
-                temp_pdf_path = temp_pdf.name
-
-            self.logger.info(f"开始Pandoc解析: {temp_pdf_path}")
-            
-            # Pandoc转换PDF到Markdown
-            # 注意：Pandoc处理PDF时不需要指定--from格式
-            markdown_content = self.pandoc_converter.convert_to_markdown(
-                file_path=temp_pdf_path,
-                file_extension=".pdf" 
-            )
-
-            if not markdown_content or not markdown_content.strip():
-                return self._create_error_result("Pandoc解析结果为空")
-
-            # 对于从Pandoc获取的内容，我们目前不处理图片或复杂元数据
-            metadata = {
-                "parser": "pandoc",
-                "format": "markdown"
-            }
-            
-            self.logger.info(f"Pandoc解析PDF成功，内容长度: {len(markdown_content)}")
-            return self._create_success_result(markdown_content, "pdf_markdown_pandoc", metadata)
-
-        except Exception as e:
-            self.logger.error(f"Pandoc解析PDF失败: {e}")
-            return self._create_error_result(f"Pandoc解析PDF失败: {e}")
-        finally:
-            # 清理临时文件
-            if temp_pdf_path and os.path.exists(temp_pdf_path):
-                os.unlink(temp_pdf_path)
+            self.logger.error(f"解析PDF文档失败: {e}")
+            return self._create_error_result(f"解析PDF文档失败: {e}")
 
     def _parse_with_pymupdf4llm(self, content: bytes) -> ParseResult:
         """
