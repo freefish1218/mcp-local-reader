@@ -15,7 +15,7 @@ def show_help():
 MCP本地文件读取器服务器
 
 用途:
-    本地文件内容读取服务，支持PDF、Office文档、图像OCR等多种格式
+    本地文件内容读取服务，支持PDF、Office文档格式
 
 传输模式:
     --stdio     使用标准输入输出传输 (推荐本地集成)
@@ -45,7 +45,6 @@ MCP本地文件读取器服务器
     • Office文档 (.doc, .docx, .xls, .xlsx, .ppt, .pptx)
     • OpenDocument (.odt, .ods, .odp)
     • 文本文件 (.txt, .md, .json)
-    • 图像文件 (.png, .jpg, .gif等，支持OCR)
     • 压缩文件 (.zip, .7z, .tar等)
 """
     print(help_text)

@@ -100,14 +100,14 @@ async def list_tools() -> List[Tool]:
     return [
         Tool(
             name="read_local_files",
-            description="读取本地文件系统中的文件内容，支持PDF、Office文档、图像OCR等多种格式",
+            description="读取本地文件系统中的PDF、Office文档",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "file_paths": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "本地文件绝对路径数组，必须使用完整的绝对路径(如/Users/user/document.pdf)。支持格式：PDF、Office文档(doc/docx/xls/xlsx/ppt/pptx)、OpenDocument(odt/ods/odp)、图像文件(png/jpg/gif等)"
+                        "description": "本地文件绝对路径数组，必须使用完整的绝对路径(如/Users/user/document.pdf)。支持格式：PDF、Office文档(doc/docx/xls/xlsx/ppt/pptx)、OpenDocument(odt/ods/odp)。不支持图片"
                     },
                     "max_size": {
                         "type": "integer", 

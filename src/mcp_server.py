@@ -134,7 +134,7 @@ def get_local_file_reader() -> FileReader:
     )
 )
 async def read_local_files(
-    file_paths: Annotated[List[str], "本地Office或PDF文件绝对路径数组，必须使用完整的绝对路径(如/Users/user/document.pdf)。支持格式：PDF、Office文档(doc/docx/xls/xlsx/ppt/pptx)、OpenDocument(odt/ods/odp)。不支持图片"],
+    file_paths: Annotated[List[str], "本地文件绝对路径数组，必须使用完整的绝对路径(如/Users/user/document.pdf)。支持格式：PDF、Office文档(doc/docx/xls/xlsx/ppt/pptx)、OpenDocument(odt/ods/odp)。不支持图片"],
     max_size: Annotated[Optional[int], "单个文件大小限制(MB)"] = 20,
 ) -> List[TextContent]:
         """
