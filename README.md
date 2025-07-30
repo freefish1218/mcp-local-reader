@@ -12,9 +12,10 @@
 - [x] 上传本地文件识别时, 先上传 Storage（统一管理文件存储）
 - [x] 对json进行处理
 - [x] 对压缩文件进行处理（zip/rar/7z/tar/gz等），返回压缩文件中的文件列表及链接
-- [ ] 考虑增加本地图片 OCR 识别（排除无效图片，需平衡性能和准确率）
+- [x] 考虑增加本地图片 OCR 识别（排除无效图片，需平衡性能和准确率）
 - [ ] 返回的元数据信息太多，需精简
 - [ ] 高价值图片预热（先简要判断图片是否重要/富文本）
+
 
 ## 🚀 核心功能
 
@@ -167,32 +168,17 @@ LOCAL_FILE_ALLOW_ABSOLUTE_PATHS=true
 
 ### MCP 客户端集成
 
-**Claude Desktop 配置** (`claude_desktop_config.json`):
+**配置示例**:
 ```json
-{
   "mcpServers": {
-    "file-reader": {
-      "command": "python",
-      "args": ["/path/to/mcp-file-reader/run_server.py"],
-      "env": {
-        "OPENAI_API_KEY": "your_openai_key"
-      }
+    "local-file-reader": {
+      "command": "bash",
+      "args": [
+        "/Users/ben/develop/tools/mcp-local-reader/start_mcp.sh"
+      ],
+      "env": {}
     }
   }
-}
-```
-
-**VS Code 配置** (使用 MCP 扩展):
-```json
-{
-  "mcp.servers": [
-    {
-      "name": "file-reader",
-      "command": "python",
-      "args": ["/path/to/mcp-file-reader/run_server.py"]
-    }
-  ]
-}
 ```
 
 ### 命令行测试

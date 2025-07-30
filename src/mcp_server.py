@@ -6,16 +6,13 @@ MCP文件读取器服务器实现
 import os
 import tomllib
 from pathlib import Path
-from typing import List, Dict, Optional, Annotated
+from typing import List, Optional, Annotated
 
 from mcp.server.fastmcp import FastMCP
 from mcp.types import TextContent, ToolAnnotations
 
 from .file_reader import FileReader, ReadResponse, FailureType, LocalReadRequest, LocalFileStorageClient
 from .file_reader.utils import get_logger
-from pydantic import Field
-
-
 
 
 def get_version_from_pyproject() -> str:
@@ -137,7 +134,7 @@ def get_local_file_reader() -> FileReader:
     )
 )
 async def read_local_files(
-    file_paths: Annotated[List[str], "本地文件绝对路径数组，必须使用完整的绝对路径(如/Users/user/document.pdf)。支持格式：PDF、Office文档(doc/docx/xls/xlsx/ppt/pptx)、OpenDocument(odt/ods/odp)。不支持图片"],
+    file_paths: Annotated[List[str], "本地Office或PDF文件绝对路径数组，必须使用完整的绝对路径(如/Users/user/document.pdf)。支持格式：PDF、Office文档(doc/docx/xls/xlsx/ppt/pptx)、OpenDocument(odt/ods/odp)。不支持图片"],
     max_size: Annotated[Optional[int], "单个文件大小限制(MB)"] = 20,
 ) -> List[TextContent]:
         """
@@ -217,17 +214,8 @@ async def read_local_files(
             # 执行文件读取
             reader_instance = get_local_file_reader()
             
-            # 需要将LocalReadRequest转换为FileReader可以处理的格式
-            # 创建一个与读取器兼容的ReadRequest，使用file_paths作为resource_ids
-            read_kwargs = {
-                "resource_ids": request.file_paths
-            }
-            if hasattr(request, 'max_size'):
-                read_kwargs["max_size"] = request.max_size
-            
-            compatible_request = ReadRequest(**read_kwargs)
-            
-            response = await reader_instance.read_files(compatible_request)
+            # 直接传递LocalReadRequest对象，FileReader.read_files()已经支持
+            response = await reader_instance.read_files(request)
             
             logger.info(f"本地文件读取完成 - 成功: {len(response.contents)}, 失败: {len(response.failed)}")
             
