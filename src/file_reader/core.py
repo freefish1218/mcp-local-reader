@@ -150,9 +150,14 @@ class FileReader:
         
         # 检查解析缓存
         cached_content = await self._check_parsed_cache(normalized_path, request)
-        if cached_content:
+        if cached_content is not None:
             self.logger.info(f"解析缓存命中: {file_path}")
-            response.add_content(file_path, cached_content)
+            # 检查缓存内容的长度
+            if len(cached_content) < self.min_content_length:
+                self.logger.error(f"缓存内容过短: {file_path}, 内容长度: {len(cached_content)}, 最小要求: {self.min_content_length}")
+                response.add_failure(file_path, FailureType.PARSE_ERROR, "提取的内容过短")
+            else:
+                response.add_content(file_path, cached_content)
             return response
             
         self.logger.info(f"解析缓存未命中，需要读取和解析: {file_path}")

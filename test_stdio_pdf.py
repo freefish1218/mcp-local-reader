@@ -14,7 +14,7 @@ def test_mcp_stdio_pdf_reading():
     """Test reading PDF file through MCP stdio server"""
     
     # Get absolute path to the PDF file
-    pdf_path = os.path.abspath("AIBT作业缴交表.pdf")
+    pdf_path = os.path.abspath("作业缴交表.pdf")
     
     if not os.path.exists(pdf_path):
         print(f"❌ PDF file not found: {pdf_path}")
