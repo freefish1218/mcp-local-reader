@@ -3,9 +3,6 @@ MCP-File-Reader 配置模块
 提供文件类型定义和基本配置
 """
 
-import os
-from typing import Dict, List
-
 from dotenv import load_dotenv
 load_dotenv(override=True)
 
@@ -95,7 +92,3 @@ RESOURCE_ID_DETECTION_RULES = {
     'min_length': 3,
     'max_length': 512
 }
-
-
-# 基本配置
-DEFAULT_OPENAI_MODEL = "gpt-4o"

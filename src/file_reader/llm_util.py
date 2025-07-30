@@ -7,10 +7,8 @@ import os
 import json
 import re
 
-from typing import Dict, Any, Optional, Union, List
+from typing import Dict, Union, List
 from langchain_openai import ChatOpenAI
-
-from .config import DEFAULT_OPENAI_MODEL
 from .utils import get_logger
 
 from dotenv import load_dotenv
@@ -19,28 +17,25 @@ load_dotenv(override=True)
 logger = get_logger(__name__)
 
 # 从环境变量获取默认配置
-DEFAULT_LLM_PLATFORM = os.getenv("LLM_VISION_PLATFORM", "")
-DEFAULT_LLM_MODEL = os.getenv("LLM_VISION_MODEL", "")
-VERBOSE = os.getenv("VERBOSE", "").lower() in ("true", "1")
+LLM_BASE_URL = os.getenv("LLM_VISION_BASE_URL", "")
+LLM_API_KEY = os.getenv("LLM_VISION_API_KEY", "")
+LLM_MODEL = os.getenv("LLM_VISION_MODEL", "")
+VERBOSE = os.getenv("LLM_VERBOSE", "").lower() in ("true", "1")
 
-async def get_llm(agent_name: Optional[str] = None) -> ChatOpenAI:
+async def get_llm() -> ChatOpenAI:
     """
     获取配置的LLM实例
-    
-    Args:
-        agent_name: 可选的代理名称，用于获取特定代理的配置
-        
+
     Returns:
         ChatOpenAI: 配置好的ChatOpenAI实例
     """
-    # 直接从环境变量获取配置
-    model = os.getenv("OPENAI_MODEL", DEFAULT_OPENAI_MODEL)
-    api_key = os.getenv("OPENAI_API_KEY")
-    base_url = os.getenv("OPENAI_API_BASE")
+    base_url = LLM_BASE_URL
+    api_key = LLM_API_KEY
+    model = LLM_MODEL
     
     if not api_key:
-        raise ValueError("OPENAI_API_KEY environment variable is required")
-    
+        raise ValueError("LLM_API_KEY environment variable is required")
+
     kwargs = {
         "model": model,
         "api_key": api_key,
