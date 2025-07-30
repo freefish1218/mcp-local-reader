@@ -53,7 +53,7 @@ SERVER_INFO = {
     "name": "MCPLocalFileReaderServer",
     "version": version,
     "description": "本地文件内容读取服务，支持解析PDF、Office文档等多种格式",
-    "features": ["PDF解析", "Office文档", "图像OCR", "文本提取", "批量处理"],
+    "features": ["PDF解析", "Office文档", "图像OCR", "文本提取"],
     "instructions": f"这个服务器提供本地文件内容读取功能，支持解析PDF、Office文档、图像OCR等多种格式。当前版本: {version}"
 }
 
@@ -173,15 +173,15 @@ async def read_local_file(
             
             # 执行文件读取
             reader_instance = get_local_file_reader()
-            response = await reader_instance.read_files(request)
+            response = await reader_instance.read_file(request)
             
             # 检查读取结果
-            if response.contents and len(response.contents) > 0:
+            if response.contents:
                 # 成功读取，直接返回文件内容
                 content = response.contents[0].content
                 logger.info(f"文件读取成功: {file_path}, 内容长度: {len(content)} 字符")
                 return [TextContent(type="text", text=content)]
-            elif response.failed and len(response.failed) > 0:
+            elif response.failed:
                 # 读取失败，返回错误信息
                 failed_file = response.failed[0]
                 error_msg = f"文件读取失败: {failed_file.type.value} - {failed_file.error_message}"

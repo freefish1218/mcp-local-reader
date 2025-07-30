@@ -3,7 +3,6 @@
 负责协调各个组件完成文件内容提取
 """
 
-import asyncio
 from typing import Optional
 
 from .models import ReadResponse, FailureType
@@ -97,52 +96,35 @@ class FileReader:
         max_file_size_str = format_file_size(self.max_file_size) if self.max_file_size else "由请求控制"
         self.logger.info(f"文件读取器初始化完成 - 本地文件模式, 最大文件大小: {max_file_size_str}")
     
-    def _normalize_and_validate_url(self, url: str) -> tuple[str, Optional[str]]:
+    def _normalize_and_validate_path(self, file_path: str) -> tuple[str, Optional[str]]:
         """
-        标准化和验证URL
-        
+        标准化和验证文件路径
+
         Args:
-            url: 原始URL字符串
+            path: 原始路径字符串
             
         Returns:
-            tuple: (normalized_url, error_message)
-                  如果验证失败，normalized_url为None，error_message包含错误信息
+            tuple: (normalized_path, error_message)
+                  如果验证失败，normalized_path为None，error_message包含错误信息
         """
-        if not url:
-            return None, "URL为空"
+        if not file_path:
+            return None, "路径为空"
         
         # 去除首尾空格
-        normalized_url = url.strip()
+        normalized_path = file_path.strip()
         
-        if not normalized_url:
-            return None, "URL去除空格后为空"
+        if not normalized_path:
+            return None, "路径去除空格后为空"
         
-        # 检查URL协议
-        supported_protocols = ['http://', 'https://', 'file://']
-        has_protocol = any(normalized_url.lower().startswith(protocol) for protocol in supported_protocols)
-        
-        # 如果没有协议，检查是否为本地文件路径
-        if not has_protocol:
-            # 允许普通文件路径（相对路径或绝对路径）
-            from pathlib import Path
-            try:
-                # 尝试创建Path对象来验证路径格式
-                path_obj = Path(normalized_url)
-                # 如果是相对路径或绝对路径都可以接受
-                self.logger.debug(f"检测到本地文件路径: {normalized_url}")
-                return normalized_url, None
-            except Exception as e:
-                return None, f"无效的文件路径: {e}"
-        
-        # 对于HTTP/HTTPS URL，清理跟踪参数以提高缓存命中率
-        if normalized_url.lower().startswith(('http://', 'https://')):
-            if hasattr(self.storage_client, '_clean_tracking_params'):
-                cleaned_url = self.storage_client._clean_tracking_params(normalized_url)
-                if cleaned_url != normalized_url:
-                    self.logger.debug(f"URL跟踪参数已清理: {normalized_url} -> {cleaned_url}")
-                normalized_url = cleaned_url
-        
-        return normalized_url, None
+        # 验证路径是否有效
+        from pathlib import Path
+        try:
+            # 尝试创建Path对象来验证路径格式
+            Path(normalized_path)
+            self.logger.debug(f"检测到有效的本地文件路径: {normalized_path}")
+            return normalized_path, None
+        except Exception as e:
+            return None, f"无效的文件路径: {e}"
 
     async def read_file(self, request) -> ReadResponse:
         """
@@ -159,15 +141,15 @@ class FileReader:
         
         response = ReadResponse()
         
-        # URL标准化和验证
-        normalized_url, error_message = self._normalize_and_validate_url(file_path)
+        # 路径标准化和验证
+        normalized_path, error_message = self._normalize_and_validate_path(file_path)
         if error_message:
-            self.logger.warning(f"无效的URL: {file_path}, 错误: {error_message}")
+            self.logger.warning(f"无效的路径: {file_path}, 错误: {error_message}")
             response.add_failure(file_path, FailureType.INVALID_URL, error_message)
             return response
         
         # 检查解析缓存
-        cached_content = await self._check_parsed_cache(normalized_url, request)
+        cached_content = await self._check_parsed_cache(normalized_path, request)
         if cached_content:
             self.logger.info(f"解析缓存命中: {file_path}")
             response.add_content(file_path, cached_content)
@@ -177,18 +159,18 @@ class FileReader:
         
         # 读取文件
         try:
-            with open(normalized_url, 'rb') as f:
+            with open(normalized_path, 'rb') as f:
                 file_content = f.read()
-            self.logger.debug(f"成功读取本地文件: {normalized_url}, 大小: {len(file_content)}字节")
+            self.logger.debug(f"成功读取本地文件: {normalized_path}, 大小: {len(file_content)}字节")
         except Exception as e:
-            self.logger.error(f"读取本地文件失败: {normalized_url}, 错误: {e}")
+            self.logger.error(f"读取本地文件失败: {normalized_path}, 错误: {e}")
             response.add_failure(file_path, FailureType.OTHER, f"文件读取失败: {e}")
             return response
             
         # 处理文件内容
         max_size = getattr(request, 'max_size', 20 * 1024 * 1024)
         success, content_or_error, error_type = await self._process_file_content(
-            normalized_url, file_content, max_size
+            normalized_path, file_content, max_size
         )
         
         if success:
@@ -283,13 +265,10 @@ class FileReader:
             文件扩展名（如果支持），否则返回None
         """
         try:
-            # 使用Path提取扩展名（兼容文件路径和URL格式）
+            # 使用Path提取扩展名
             from pathlib import Path
             
-            # 处理可能的查询参数情况：file.pdf?version=1
-            resource_clean = resource_id.split('?')[0] if '?' in resource_id else resource_id
-            
-            ext = Path(resource_clean).suffix.lower()
+            ext = Path(resource_id).suffix.lower()
             
             if ext and len(ext) > 1:  # 确保不是只有一个点
                 # 只返回支持的文件类型
@@ -312,79 +291,44 @@ class FileReader:
         self.storage_client.clear_cache()
         self.logger.info("缓存已清空")
     
-    async def _check_parsed_cache(self, url: str, request) -> Optional[str]:
+    async def _check_parsed_cache(self, path: str, request) -> Optional[str]:
         """
-        检查URL对应的解析缓存
-        
+        检查文件路径对应的解析缓存
+
         Args:
-            url: 文件URL
+            path: 文件路径
             request: 请求对象，用于生成缓存键
-            
+
         Returns:
             缓存的解析内容，如果没有缓存则返回None
         """
         try:
             # 获取文件内容用于生成解析缓存键
-            file_content = None
-            
-            # 对于HTTP下载，先检查HTTP下载缓存
-            if hasattr(self.storage_client, '_get_cache_key') and hasattr(self.storage_client, 'cache'):
-                # HTTP下载模式 - 检查下载缓存
-                try:
-                    # 为LocalFileStorageClient只传入文件路径参数
-                    if hasattr(self.storage_client, '__class__') and 'LocalFileStorageClient' in str(self.storage_client.__class__):
-                        cache_key = self.storage_client._get_cache_key(url)
-                    else:
-                        cache_key = self.storage_client._get_cache_key(url, request)
-                    cached_data = self.storage_client.cache.get(cache_key)
-                    
-                    if cached_data and isinstance(cached_data, dict) and "content" in cached_data:
-                        file_content = cached_data["content"]
-                        self.logger.debug(f"从HTTP下载缓存获取文件内容: {url}")
-                except Exception as e:
-                    self.logger.debug(f"检查HTTP下载缓存失败: {url}, 错误: {e}")
-            
-            # 如果HTTP下载缓存未命中，或者是本地文件，尝试直接读取
-            if file_content is None:
-                if url.startswith('file://'):
-                    file_path = url[7:]  # 移除 'file://' 前缀
-                else:
-                    file_path = url
-                
-                # 只对本地文件路径尝试直接读取
-                if not url.startswith('http://') and not url.startswith('https://'):
-                    try:
-                        with open(file_path, 'rb') as f:
-                            file_content = f.read()
-                        self.logger.debug(f"直接读取本地文件内容: {url}")
-                    except Exception as e:
-                        self.logger.debug(f"直接读取本地文件失败: {url}, 错误: {e}")
-                        return None
-                else:
-                    # HTTP URL但下载缓存未命中，无法获取文件内容检查解析缓存
-                    self.logger.debug(f"HTTP URL下载缓存未命中，无法检查解析缓存: {url}")
-                    return None
-            
-            if file_content is None:
+            try:
+                with open(path, 'rb') as f:
+                    file_content = f.read()
+                self.logger.debug(f"直接读取本地文件内容: {path}")
+            except Exception as e:
+                self.logger.debug(f"直接读取本地文件失败: {path}, 错误: {e}")
                 return None
-            
+
             # 检测文件类型
-            file_extension = self._detect_file_type(url)
+            file_extension = self._detect_file_type(path)
             if not file_extension:
-                self.logger.debug(f"无法检测文件类型: {url}")
+                self.logger.debug(f"无法检测文件类型: {path}")
                 return None
-            
+
             # 选择合适的解析器
             parser_type = self.file_type_mapping.get(file_extension)
             if not parser_type:
-                self.logger.debug(f"不支持的文件类型: {url}, 扩展名: {file_extension}")
+                self.logger.debug(f"不支持的文件类型: {path}, 扩展名: {file_extension}")
                 return None
-            
+
             parser = self.parsers.get(parser_type)
             if not parser:
-                self.logger.debug(f"解析器未找到: {url}, parser_type: {parser_type}")
+                self.logger.debug(f"解析器未找到: {path}, parser_type: {parser_type}")
                 return None
-            
+
             # 生成解析缓存键
             parse_cache_key = self.parsed_cache.get_cache_key(
                 file_content, 
@@ -392,16 +336,16 @@ class FileReader:
                 parser.parser_version,
                 None  # 暂时不包含额外参数
             )
-            
+
             # 检查解析缓存
             cached_result = self.parsed_cache.get_cached_result(parse_cache_key)
             if cached_result:
-                self.logger.debug(f"解析缓存命中: {url}, 解析器: {parser_type}")
+                self.logger.debug(f"解析缓存命中: {path}, 解析器: {parser_type}")
                 return cached_result["content"]
             else:
-                self.logger.debug(f"解析缓存未命中: {url}, 解析器: {parser_type}")
+                self.logger.debug(f"解析缓存未命中: {path}, 解析器: {parser_type}")
                 return None
-                
+
         except Exception as e:
-            self.logger.debug(f"检查解析缓存失败: {url}, 错误: {e}")
+            self.logger.debug(f"检查解析缓存失败: {path}, 错误: {e}")
             return None
