@@ -143,7 +143,7 @@ async def read_local_file(
             max_size: 文件大小限制(MB)，为空时使用环境变量FILE_READER_MAX_FILE_SIZE_MB的默认值
         
         Returns:
-            文件内容字符串
+            文件内容字符串（markdown格式）
         """
         logger.info(f"收到本地文件内容读取请求: {file_path}")
 
@@ -197,6 +197,130 @@ async def read_local_file(
             error_msg = f"文件读取处理异常: {str(e)}"
             logger.error(error_msg)
             return [TextContent(type="text", text=f"错误: {error_msg}")]
+
+
+# 本地文件转换工具
+@mcp.tool(
+    description="将本地文件转换为markdown文件并保存到文件系统",
+    annotations=ToolAnnotations(
+        title="本地文件转换工具",
+        readOnlyHint=False,  # 会写入文件
+        destructiveHint=False,
+        idempotentHint=False,  # 每次执行可能产生不同结果
+        openWorldHint=True,
+        category="file_converter",
+    )
+)
+async def convert_local_file(
+    file_path: Annotated[str, "本地文件绝对路径，必须使用完整的绝对路径(如/Users/user/document.pdf)。支持格式：PDF、Office文档(doc/docx/xls/xlsx/ppt/pptx)、OpenDocument(odt/ods/odp)。不支持图片"],
+    output_path: Annotated[Optional[str], "输出markdown文件路径，默认为原文件名+.md"] = None,
+    max_size: Annotated[Optional[int], "单个文件大小限制(MB)"] = 20,
+    overwrite: Annotated[bool, "是否覆盖已存在的文件"] = False,
+) -> List[TextContent]:
+    """
+    将指定文件转换为markdown格式并保存到文件系统
+    
+    Args:
+        file_path: 输入文件的绝对路径
+        output_path: 输出文件路径，为空时使用原文件名+.md扩展名
+        max_size: 文件大小限制(MB)
+        overwrite: 是否覆盖已存在的文件
+    
+    Returns:
+        转换操作结果信息
+    """
+    logger.info(f"收到文件转换请求: {file_path}")
+    
+    try:
+        # 1. 先使用现有逻辑读取文件内容
+        # 复用 read_local_file 的核心逻辑
+        import urllib.parse
+        decoded_path = urllib.parse.unquote(file_path)
+        if decoded_path != file_path:
+            logger.debug(f"URL解码路径: {file_path} -> {decoded_path}")
+        file_path = decoded_path
+        
+        # 验证路径必须是绝对路径
+        if not os.path.isabs(file_path):
+            error_msg = f"路径格式错误: 必须使用绝对路径(以/开头)，当前路径'{file_path}'为相对路径"
+            logger.error(error_msg)
+            return [TextContent(type="text", text=f"错误: {error_msg}")]
+        
+        # 创建读取请求
+        kwargs = {
+            "file_paths": [file_path],
+            "allow_absolute_paths": True
+        }
+        if max_size is not None:
+            kwargs["max_size"] = max_size * 1024 * 1024
+        
+        request = LocalReadRequest(**kwargs)
+        reader_instance = get_local_file_reader()
+        response = await reader_instance.read_file(request)
+        
+        # 检查读取结果
+        if not response.contents:
+            if response.failed:
+                failed_file = response.failed[0]
+                error_msg = f"文件读取失败: {failed_file.type.value} - {failed_file.error_message}"
+                logger.error(error_msg)
+                return [TextContent(type="text", text=f"错误: {error_msg}")]
+            else:
+                error_msg = "文件读取异常：未返回内容或错误信息"
+                logger.error(error_msg)
+                return [TextContent(type="text", text=f"错误: {error_msg}")]
+        
+        markdown_content = response.contents[0].content
+        logger.info(f"文件读取成功: {file_path}, 内容长度: {len(markdown_content)} 字符")
+        
+        # 2. 确定输出路径
+        if output_path is None:
+            # 默认使用原文件名 + .md 扩展名
+            from pathlib import Path
+            input_path = Path(file_path)
+            output_path = str(input_path.with_suffix('.md'))
+        
+        # 验证输出路径是绝对路径
+        if not os.path.isabs(output_path):
+            error_msg = f"输出路径必须是绝对路径: {output_path}"
+            logger.error(error_msg)
+            return [TextContent(type="text", text=f"错误: {error_msg}")]
+        
+        # 3. 检查文件是否已存在
+        if os.path.exists(output_path) and not overwrite:
+            error_msg = f"输出文件已存在: {output_path}，使用 overwrite=true 来覆盖"
+            logger.warning(error_msg)
+            return [TextContent(type="text", text=f"错误: {error_msg}")]
+        
+        # 4. 检查输出目录是否存在，不存在则创建
+        output_dir = os.path.dirname(output_path)
+        if not os.path.exists(output_dir):
+            try:
+                os.makedirs(output_dir, exist_ok=True)
+                logger.info(f"创建输出目录: {output_dir}")
+            except Exception as e:
+                error_msg = f"创建输出目录失败: {output_dir}, 错误: {e}"
+                logger.error(error_msg)
+                return [TextContent(type="text", text=f"错误: {error_msg}")]
+        
+        # 5. 写入markdown文件
+        try:
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write(markdown_content)
+            
+            success_msg = f"文件转换成功: {file_path} -> {output_path}"
+            logger.info(success_msg)
+            return [TextContent(type="text", text=success_msg)]
+            
+        except Exception as e:
+            error_msg = f"写入输出文件失败: {output_path}, 错误: {e}"
+            logger.error(error_msg)
+            return [TextContent(type="text", text=f"错误: {error_msg}")]
+            
+    except Exception as e:
+        error_msg = f"文件转换处理异常: {str(e)}"
+        logger.error(error_msg)
+        return [TextContent(type="text", text=f"错误: {error_msg}")]
 
 
 def run_server():
