@@ -31,6 +31,9 @@ venv.bak/
 # IDE
 .cursor/
 .vscode/
+.claude/
+CLAUDE.md
+.CLAUDE.md
 .idea/
 *.swp
 *.swo
@@ -69,4 +72,3 @@ ehthumbs.db
 # 其他
 tests/files/
 tests/outputs/
-.CLAUDE.md
