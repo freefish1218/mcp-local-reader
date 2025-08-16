@@ -3,6 +3,7 @@
 提供临时文件管理、格式检查等通用功能
 """
 
+import os
 import tempfile
 from pathlib import Path
 from typing import Dict, Any
@@ -33,6 +34,8 @@ class FileManager:
             suffix=file_extension, 
             delete=False
         )
+        # 确保临时文件权限为600（仅所有者可读写）
+        os.chmod(temp_file.name, 0o600)
         temp_file.write(content)
         temp_file.close()
         

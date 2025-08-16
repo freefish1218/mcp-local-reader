@@ -109,7 +109,7 @@ async def main():
         transport = StreamableHttpTransport(mcp_service_url)
         async with Client(transport) as mcp_client:
             # 解析PDF
-            result = await mcp_client.call_tool("read_files", {
+            result = await mcp_client.call_tool("read_local_file", {
                 "urls": [{"url": pdf_url}],
                 "max_size": 100  # 100MB限制
             })
@@ -186,7 +186,7 @@ async def main():
             # test_images 现在包含的是resource_id（没有file://前缀），需要重新添加前缀
             image_urls = [{"url": f"file:///{link}"} for link in test_images]
             
-            result = await mcp_client.call_tool("read_files", {
+            result = await mcp_client.call_tool("read_local_file", {
                 "urls": image_urls,
                 "max_size": 10  # 10MB限制
             })

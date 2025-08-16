@@ -3,6 +3,7 @@
 """
 
 import os
+import sys
 import logging
 from pathlib import Path
 from datetime import datetime
@@ -48,8 +49,8 @@ def get_logger(name: str, level: str = None) -> logging.Logger:
         datefmt='%Y-%m-%d %H:%M:%S'
     )
     
-    # 创建控制台处理器
-    console_handler = logging.StreamHandler()
+    # 创建控制台处理器，明确指定输出到stderr
+    console_handler = logging.StreamHandler(sys.stderr)
     console_handler.setLevel(logger.level)
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
@@ -62,10 +63,10 @@ def get_logger(name: str, level: str = None) -> logging.Logger:
         logger.addHandler(file_handler)
     except Exception as e:
         # 如果文件处理器创建失败，至少保证控制台输出可用
-        console_handler = logging.StreamHandler()
+        console_handler = logging.StreamHandler(sys.stderr)
         console_handler.setLevel(logger.level)
         console_handler.setFormatter(formatter)
-        print(f"警告: 无法创建日志文件 {log_filename}: {e}")
+        print(f"警告: 无法创建日志文件 {log_filename}: {e}", file=sys.stderr)
     
     return logger
 

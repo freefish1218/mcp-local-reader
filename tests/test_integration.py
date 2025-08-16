@@ -121,7 +121,7 @@ class IntegrationTester:
         urls = [{"url": file_url}]
         
         try:
-            result = await self.mcp_client.call_tool("read_files", {
+            result = await self.mcp_client.call_tool("read_local_file", {
                 "urls": urls,
                 "max_size": 50  # 50MB限制
             })

@@ -83,6 +83,8 @@ class OfficeParser(BaseParser, ImageProcessingMixin):
             
             # 创建临时图片目录
             temp_image_dir = tempfile.mkdtemp(prefix=f"office_{file_extension[1:]}_images_")
+            # 确保临时目录权限为700（仅所有者可读写执行）
+            os.chmod(temp_image_dir, 0o700)
             
             # 根据文件类型选择最佳解析策略，同时提取图片
             if self.format_checker.needs_pandoc(file_extension):

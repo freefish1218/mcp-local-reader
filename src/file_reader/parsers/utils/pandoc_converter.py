@@ -6,6 +6,7 @@ Pandoc转换工具
 import tempfile
 import subprocess
 import os
+import shlex
 from pathlib import Path
 from typing import Optional
 
@@ -44,12 +45,16 @@ class PandocConverter:
                 use_existing_dir = False
                 
             try:
-                # 构建pandoc命令
+                # 构建pandoc命令，使用shlex.quote()防止命令注入
+                # 对文件路径和媒体目录进行安全转义
+                safe_file_path = shlex.quote(os.path.abspath(file_path))
+                safe_media_dir = shlex.quote(os.path.abspath(media_dir))
+                
                 cmd = [
                     'pandoc',
-                    file_path,
+                    safe_file_path,
                     '--to', 'markdown',
-                    '--extract-media', media_dir,
+                    '--extract-media', safe_media_dir,
                     '--wrap', 'none',  # 不自动换行
                 ]
                 

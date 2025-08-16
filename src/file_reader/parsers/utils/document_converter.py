@@ -5,6 +5,8 @@
 
 import tempfile
 import subprocess
+import shlex
+import os
 from pathlib import Path
 from typing import Optional
 import shutil
@@ -46,13 +48,17 @@ class DocumentConverter:
             
             # 创建临时输出目录
             with tempfile.TemporaryDirectory() as temp_dir:
-                # LibreOffice命令行转换
+                # LibreOffice命令行转换，使用shlex.quote()防止命令注入
+                # 对文件路径和输出目录进行安全转义
+                safe_file_path = shlex.quote(os.path.abspath(file_path))
+                safe_temp_dir = shlex.quote(os.path.abspath(temp_dir))
+                
                 cmd = [
                     'libreoffice',
                     '--headless',
                     '--convert-to', target_format,
-                    '--outdir', temp_dir,
-                    file_path
+                    '--outdir', safe_temp_dir,
+                    safe_file_path
                 ]
                 
                 # 尝试不同的LibreOffice命令名称
@@ -107,6 +113,8 @@ class DocumentConverter:
                     suffix=f'.{target_format}', 
                     delete=False
                 )
+                # 确保临时文件权限为600（仅所有者可读写）
+                os.chmod(new_temp_file.name, 0o600)
                 new_temp_file.close()
                 
                 shutil.copy2(str(target_file), new_temp_file.name)

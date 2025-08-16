@@ -64,7 +64,7 @@ async def main():
         
         transport = StreamableHttpTransport(mcp_service_url)
         async with Client(transport) as mcp_client:
-            result = await mcp_client.call_tool("read_files", {
+            result = await mcp_client.call_tool("read_local_file", {
                 "urls": [{"url": file_url}],
                 "max_size": 50
             })

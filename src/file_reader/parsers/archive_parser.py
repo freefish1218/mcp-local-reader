@@ -61,11 +61,15 @@ class ArchiveParser(BaseParser, FileProcessingMixin):
             
             # 保存压缩文件到临时位置
             temp_archive_file = tempfile.NamedTemporaryFile(suffix=file_extension, delete=False)
+            # 确保临时文件权限为600（仅所有者可读写）
+            os.chmod(temp_archive_file.name, 0o600)
             temp_archive_file.write(content)
             temp_archive_file.close()
             
             # 创建临时解压目录
             temp_extract_dir = tempfile.mkdtemp(prefix=f"archive_{file_extension[1:]}_extract_")
+            # 确保临时目录权限为700（仅所有者可读写执行）
+            os.chmod(temp_extract_dir, 0o700)
             
             # 解压文件
             extracted_files = self.archive_extractor.extract_archive(

@@ -47,7 +47,7 @@ MCP本地文件读取器服务器
     • 文本文件 (.txt, .md, .json)
     • 压缩文件 (.zip, .7z, .tar等)
 """
-    print(help_text)
+    print(help_text, file=sys.stderr)
 
 def parse_arguments():
     """解析命令行参数"""
@@ -99,8 +99,8 @@ def parse_arguments():
     
     # 如果没有指定传输模式，默认使用stdio模式
     if not args.stdio and not args.http:
-        print("未指定传输模式，默认使用stdio模式")
-        print("提示: 使用 --help 查看更多选项")
+        print("未指定传输模式，默认使用stdio模式", file=sys.stderr)
+        print("提示: 使用 --help 查看更多选项", file=sys.stderr)
         args.stdio = True
     
     return args
@@ -122,9 +122,9 @@ async def run_stdio_server():
 
 def run_http_server(host: str, port: int):
     """运行HTTP模式服务器"""
-    print(f"启动MCP文件读取器 - HTTP模式")
-    print(f"服务地址: http://{host}:{port}/mcp")
-    print("适用于远程调用和Web集成")
+    print(f"启动MCP文件读取器 - HTTP模式", file=sys.stderr)
+    print(f"服务地址: http://{host}:{port}/mcp", file=sys.stderr)
+    print("适用于远程调用和Web集成", file=sys.stderr)
     
     # 动态导入HTTP服务器模块
     sys.path.insert(0, str(Path(__file__).parent / "src"))
@@ -150,10 +150,10 @@ def main():
             run_http_server(args.host, args.port)
         
     except KeyboardInterrupt:
-        print("\n服务器已停止")
+        print("\n服务器已停止", file=sys.stderr)
         sys.exit(0)
     except Exception as e:
-        print(f"启动服务器失败: {e}")
+        print(f"启动服务器失败: {e}", file=sys.stderr)
         sys.exit(1)
 
 if __name__ == "__main__":

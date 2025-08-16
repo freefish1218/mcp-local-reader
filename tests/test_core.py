@@ -45,7 +45,7 @@ class TestFileReader:
         )
         
         # 执行读取
-        response = await file_reader.read_files(request)
+        response = await file_reader.read_file(request)
         
         # 验证结果
         assert len(response.contents) == 1
@@ -74,7 +74,7 @@ class TestFileReader:
         )
         
         # 执行读取
-        response = await file_reader.read_files(request)
+        response = await file_reader.read_file(request)
         
         # 验证结果
         assert len(response.contents) == 0
@@ -99,7 +99,7 @@ class TestFileReader:
         )
         
         # 执行读取
-        response = await file_reader.read_files(request)
+        response = await file_reader.read_file(request)
         
         # 验证结果 - 应该因为大小超限而失败或被处理
         # 具体行为取决于实现，这里测试结构完整性
@@ -113,7 +113,7 @@ class TestFileReader:
         request = LocalReadRequest(file_paths=[])
         
         # 执行读取
-        response = await file_reader.read_files(request)
+        response = await file_reader.read_file(request)
         
         # 验证结果
         assert len(response.contents) == 0
@@ -146,7 +146,7 @@ class TestFileReader:
         )
         
         # 执行读取
-        response = await file_reader.read_files(request)
+        response = await file_reader.read_file(request)
         
         # 验证结果
         assert len(response.contents) == 1

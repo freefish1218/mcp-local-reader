@@ -78,7 +78,7 @@ async def test_improved_error_messages():
     )
     
     try:
-        response = await reader2.read_files(request)
+        response = await reader2.read_file(request)
         
         for failed in response.failed:
             print(f"  📄 {failed.resource_id}:")

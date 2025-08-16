@@ -241,6 +241,8 @@ class BaseParser(ImageProcessingMixin, ABC):
         """
         fd, temp_path = tempfile.mkstemp(suffix=suffix)
         try:
+            # 确保临时文件权限为600（仅所有者可读写）
+            os.chmod(temp_path, 0o600)
             with os.fdopen(fd, 'wb') as f:
                 f.write(content)
             return Path(temp_path)
