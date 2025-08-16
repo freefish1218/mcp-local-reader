@@ -36,7 +36,6 @@ MCP本地文件读取器服务器
     LLM_VISION_BASE_URL         视觉模型API地址
     LLM_VISION_MODEL            视觉模型名称
     LOCAL_FILE_ALLOWED_DIRECTORIES  允许访问的目录 (逗号分隔)
-    LOCAL_FILE_ALLOW_ABSOLUTE_PATHS 是否允许绝对路径访问
     FILE_READER_MAX_WORKERS     最大并发处理数
     FILE_READER_MAX_FILES_PER_REQUEST  单次请求最大文件数
 

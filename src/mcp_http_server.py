@@ -67,7 +67,6 @@ def get_local_file_reader() -> FileReader:
         
         # 本地文件存储客户端配置
         allowed_directories = os.getenv("LOCAL_FILE_ALLOWED_DIRECTORIES", "").split(",") if os.getenv("LOCAL_FILE_ALLOWED_DIRECTORIES") else None
-        allow_absolute_paths = os.getenv("LOCAL_FILE_ALLOW_ABSOLUTE_PATHS", "false").lower() == "true"
         
         # 如果没有指定允许的目录，默认使用当前工作目录
         if not allowed_directories or allowed_directories == [""]:
@@ -78,8 +77,7 @@ def get_local_file_reader() -> FileReader:
         
         # 创建本地文件存储客户端
         local_storage_client = LocalFileStorageClient(
-            allowed_directories=allowed_directories,
-            allow_absolute_paths=allow_absolute_paths
+            allowed_directories=allowed_directories
         )
         
         local_file_reader = FileReader(
@@ -181,8 +179,7 @@ async def handle_read_local_file(arguments: dict) -> List[TextContent]:
         
         # 创建本地文件读取请求
         kwargs = {
-            "file_paths": [file_path],
-            "allow_absolute_paths": True  # 强制使用绝对路径
+            "file_paths": [file_path]
         }
         if max_size is not None:
             kwargs["max_size"] = max_size * 1024 * 1024  # 转换MB为字节数
@@ -240,8 +237,7 @@ async def handle_convert_local_file(arguments: dict) -> List[TextContent]:
         
         # 创建读取请求
         kwargs = {
-            "file_paths": [file_path],
-            "allow_absolute_paths": True
+            "file_paths": [file_path]
         }
         if max_size is not None:
             kwargs["max_size"] = max_size * 1024 * 1024

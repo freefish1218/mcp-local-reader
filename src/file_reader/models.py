@@ -42,12 +42,11 @@ class FailedFile(BaseModel):
 
 class LocalReadRequest(BaseModel):
     """本地文件读取请求"""
-    file_paths: List[str] = Field(description="本地文件路径数组")
+    file_paths: List[str] = Field(description="本地文件路径数组（支持绝对路径和相对路径）")
     max_size: int = Field(
         default_factory=lambda: int(os.getenv("FILE_READER_MAX_FILE_SIZE_MB", "20")) * 1024 * 1024,
         description="读取文件时的最大大小限制(字节数)"
     )
-    allow_absolute_paths: bool = Field(default=False, description="是否允许绝对路径")
 
 
 class ReadResponse(BaseModel):

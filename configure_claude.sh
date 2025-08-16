@@ -65,7 +65,6 @@ MCP_CONFIG=$(cat <<EOF
         "CACHE_EXPIRE_DAYS": "30",
         "TOTAL_CACHE_SIZE_MB": "500",
         "LOCAL_FILE_ALLOWED_DIRECTORIES": "$ALLOWED_DIRS",
-        "LOCAL_FILE_ALLOW_ABSOLUTE_PATHS": "true",
         "FILE_READER_MAX_FILE_SIZE_MB": "20",
         "LOG_LEVEL": "INFO"
       }

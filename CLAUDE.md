@@ -110,7 +110,6 @@ TOTAL_CACHE_SIZE_MB=500  # Unified cache size
 
 # Local file access control
 LOCAL_FILE_ALLOWED_DIRECTORIES=/Users/username
-LOCAL_FILE_ALLOW_ABSOLUTE_PATHS=true
 FILE_READER_MAX_FILE_SIZE_MB=20
 
 # Logging

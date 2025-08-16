@@ -21,14 +21,12 @@ class TestLocalReadRequest:
         
         assert request.file_paths == ["file1.pdf", "file2.txt"]
         assert request.max_size == 1024*1024
-        assert request.allow_absolute_paths == False
     
     def test_local_read_request_default_values(self):
         """测试本地读取请求默认值"""
         request = LocalReadRequest(file_paths=["file1.pdf"])
         
         assert request.file_paths == ["file1.pdf"]
-        assert request.allow_absolute_paths == False
         # 默认值来自环境变量，这里不具体测试数值
     
     def test_local_read_request_validation(self):
@@ -38,14 +36,12 @@ class TestLocalReadRequest:
         assert request.file_paths == []
     
     def test_local_read_request_absolute_paths(self):
-        """测试绝对路径设置"""
+        """测试绝对路径支持"""
         request = LocalReadRequest(
-            file_paths=["/absolute/path/file.pdf"],
-            allow_absolute_paths=True
+            file_paths=["/absolute/path/file.pdf"]
         )
         
         assert request.file_paths == ["/absolute/path/file.pdf"]
-        assert request.allow_absolute_paths == True
 
 
 class TestReadResponse:

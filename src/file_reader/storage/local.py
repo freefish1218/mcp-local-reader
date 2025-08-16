@@ -24,7 +24,6 @@ class LocalFileStorageClient(BaseStorageClient):
     def __init__(
         self,
         allowed_directories: Optional[list] = None,
-        allow_absolute_paths: bool = False,
         max_file_size: int = None,
         cache_directory: Optional[str] = None,
         cache_size_mb: Optional[int] = None
@@ -33,8 +32,7 @@ class LocalFileStorageClient(BaseStorageClient):
         初始化本地文件存储客户端
         
         Args:
-            allowed_directories: 允许访问的目录列表（相对路径）
-            allow_absolute_paths: 是否允许绝对路径
+            allowed_directories: 允许访问的目录列表
             max_file_size: 最大文件大小限制（字节），为None时不设置默认限制
             cache_directory: 本地缓存目录
             cache_size_mb: 缓存大小(MB)
@@ -43,7 +41,6 @@ class LocalFileStorageClient(BaseStorageClient):
         self.logger = get_logger("storage.local")
         
         # 安全配置
-        self.allow_absolute_paths = allow_absolute_paths
         self.max_file_size = max_file_size
         
         # 设置允许访问的目录
@@ -69,7 +66,6 @@ class LocalFileStorageClient(BaseStorageClient):
         
         self.logger.info(f"本地文件读取器初始化完成")
         self.logger.info(f"允许的目录: {self.allowed_directories}")
-        self.logger.info(f"允许绝对路径: {self.allow_absolute_paths}")
         self.logger.info(f"缓存配置 - 目录: {cache_directory}, 大小: {cache_size_mb}MB")
         
     
@@ -119,11 +115,8 @@ class LocalFileStorageClient(BaseStorageClient):
             规范化后的安全路径，验证失败返回None
         """
         try:
-            # 规范化路径
+            # 规范化路径（支持绝对路径和相对路径）
             if os.path.isabs(file_path):
-                if not self.allow_absolute_paths:
-                    self.logger.error(f"不允许使用绝对路径: {file_path}")
-                    return None
                 normalized_path = os.path.normpath(file_path)
             else:
                 # 相对路径基于当前工作目录

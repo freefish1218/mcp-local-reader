@@ -32,7 +32,6 @@ async def test_improved_error_messages():
     cwd = os.getcwd()
     client = LocalFileStorageClient(
         allowed_directories=[cwd],
-        allow_absolute_paths=True,
         max_file_size=10 * 1024 * 1024  # 10MB
     )
     
@@ -60,7 +59,6 @@ async def test_improved_error_messages():
     # 创建更大的本地存储限制，但使用小的请求限制
     client2 = LocalFileStorageClient(
         allowed_directories=[cwd],
-        allow_absolute_paths=True,
         max_file_size=100 * 1024 * 1024  # 100MB
     )
     
@@ -125,7 +123,6 @@ def test_security_explanation():
     print()
     print("  3. 最佳实践:")
     print("     - 默认拒绝绝对路径（安全优先）")
-    print("     - 通过 LOCAL_FILE_ALLOW_ABSOLUTE_PATHS=true 显式启用")
     print("     - 限制访问范围在指定目录内")
     print()
     print("📏 文件大小限制:")

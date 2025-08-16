@@ -55,8 +55,7 @@ chmod +x configure_claude.sh && ./configure_claude.sh
         "/absolute/path/to/mcp-local-reader/run_mcp_server.py"
       ],
       "env": {
-        "LOCAL_FILE_ALLOWED_DIRECTORIES": "/Users/username",
-        "LOCAL_FILE_ALLOW_ABSOLUTE_PATHS": "true"
+        "LOCAL_FILE_ALLOWED_DIRECTORIES": "/Users/username"
       }
     }
   }
@@ -77,8 +76,7 @@ Add to `.claude/claude_config.json`:
         "/absolute/path/to/mcp-local-reader/run_mcp_server.py"
       ],
       "env": {
-        "LOCAL_FILE_ALLOWED_DIRECTORIES": "/Users/username",
-        "LOCAL_FILE_ALLOW_ABSOLUTE_PATHS": "true"
+        "LOCAL_FILE_ALLOWED_DIRECTORIES": "/Users/username"
       }
     }
   }
@@ -142,7 +140,6 @@ Save /Users/username/analysis.xlsx as markdown in /Users/username/output/
 ```bash
 # File access control (REQUIRED)
 LOCAL_FILE_ALLOWED_DIRECTORIES=/Users/username/Documents,/Users/username/Downloads
-LOCAL_FILE_ALLOW_ABSOLUTE_PATHS=true
 
 # Performance optimization
 TOTAL_CACHE_SIZE_MB=500          # Unified cache limit
@@ -169,7 +166,6 @@ LLM_VISION_MODEL=gpt-4o  # or qwen-vl-plus
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `LOCAL_FILE_ALLOWED_DIRECTORIES` | ✅ | `current_dir` | Comma-separated allowed directories |
-| `LOCAL_FILE_ALLOW_ABSOLUTE_PATHS` | ✅ | `false` | Enable absolute path access |
 | `TOTAL_CACHE_SIZE_MB` | ❌ | `500` | Unified cache size limit |
 | `FILE_READER_MAX_FILE_SIZE_MB` | ❌ | `20` | Maximum file size |
 | `LOG_LEVEL` | ❌ | `INFO` | Logging level |
@@ -200,7 +196,7 @@ Convert files to AI-ready markdown and save to filesystem.
 ## ❓ FAQ
 
 **Q: Files not reading correctly?**  
-A: Ensure `LOCAL_FILE_ALLOWED_DIRECTORIES` includes your file's directory and `LOCAL_FILE_ALLOW_ABSOLUTE_PATHS=true`.
+A: Ensure `LOCAL_FILE_ALLOWED_DIRECTORIES` includes your file's directory.
 
 **Q: OCR not working for images?**  
 A: Configure `LLM_VISION_API_KEY` with a valid vision model API key (OpenAI GPT-4o or compatible).
