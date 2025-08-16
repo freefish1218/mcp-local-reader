@@ -69,3 +69,4 @@ ehthumbs.db
 # 其他
 tests/files/
 tests/outputs/
+.CLAUDE.md

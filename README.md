@@ -1,202 +1,191 @@
-# MCP文件读取器 (MCP-LOCAL-Reader)
+# MCP 本地文件读取器 (MCP-LOCAL-Reader)
 
-基于 Model Context Protocol (MCP) 的多格式文件内容提取服务，支持通过 URL 下载和本地文件读取，智能提取结构化内容。
-
-## ToDo
-
-- [ ] 返回的元数据信息太多，需精简
-- [ ] 高价值图片预热（先简要判断图片是否重要/富文本）
-
+基于 Model Context Protocol (MCP) 的本地文件内容提取服务，支持多种格式文件的智能解析和结构化内容提取。
 
 ## 🚀 核心功能
 
 ### 📄 支持的文件格式
 
-- **PDF文档**: PyMuPDF4LLM 解析为 Markdown，支持图片提取 (`.pdf`)
-- **Office文档**: Word (`.doc/.docx`)、Excel (`.xls/.xlsx`)、PowerPoint (`.ppt/.pptx`)
+- **PDF 文档**: 使用 PyMuPDF4LLM 解析为 Markdown，支持图片提取
+- **Office 文档**: Word (`.doc/.docx`)、Excel (`.xls/.xlsx`)、PowerPoint (`.ppt/.pptx`)
 - **OpenDocument**: 文档 (`.odt`)、表格 (`.ods`)、演示 (`.odp`)
-- **文本文件**: 纯文本 (`.txt`)、Markdown (`.md`)、RTF (`.rtf`)、CSV (`.csv`)
+- **文本文件**: 纯文本、Markdown、JSON、CSV、EPUB
 - **图像文件**: OCR 文字识别 (`.jpg/.png/.gif/.bmp/.webp/.tiff`)
-- **压缩文件**: 解压并上传文件，生成资源链接 (`.zip/.rar/.7z/.tar/.gz/.tar.gz/.tgz`)
-- **注：解析旧的 .doc/.ppt 文件需要安装 libreoffice**
+- **压缩文件**: 智能解压并处理内部文件 (`.zip/.rar/.7z/.tar/.gz`)
+
+> 注：解析旧版 `.doc/.ppt` 文件需要安装 LibreOffice
 
 ### 🔧 核心特性
 
-- **MCP 协议**: 基于 FastMCP 框架，支持标准 MCP 客户端集成
-- **多种读取模式**: URL 下载、本地文件读取、Docker 环境文件上传
-- **智能缓存**: 解析结果和图片缓存，避免重复处理
-- **并发处理**: 多线程并发处理，提升效率
-- **OCR 识别**: 集成 OpenAI GPT-4o 进行图像文字识别
-## 🏗️ 架构设计
+- **MCP 协议**: 基于 FastMCP 框架，完美集成 Claude Desktop
+- **本地文件安全访问**: 支持目录权限控制和路径验证
+- **智能缓存系统**: 避免重复解析，提升响应速度
+- **并发处理**: 多线程并发，批量文件高效处理
+- **按需加载**: 解析器懒加载机制，降低资源消耗
+- **OCR 支持**: 可选配置视觉模型进行图像文字识别
+
+## 📦 快速安装
+
+### 最简安装（推荐）
+
+```bash
+# 1. 运行安装脚本
+chmod +x install.sh
+./install.sh
+
+# 2. 配置 Claude Desktop
+chmod +x configure_claude.sh
+./configure_claude.sh
+```
+
+### 手动安装
+
+```bash
+# 1. 安装 uv 包管理器
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 2. 创建虚拟环境并安装依赖
+uv venv
+uv sync
+
+# 3. 复制并编辑配置文件
+cp env.example .env
+# 编辑 .env 设置必要的配置
+
+# 4. 启动服务
+source .venv/bin/activate
+uv run python run_mcp_server.py
+```
+
+## ⚙️ 配置说明
+
+### 基础配置 (.env)
+
+```bash
+# 缓存配置
+CACHE_ROOT_DIR=cache
+CACHE_EXPIRE_DAYS=30
+TOTAL_CACHE_SIZE_MB=500  # 统一缓存大小限制
+
+# 本地文件访问控制
+LOCAL_FILE_ALLOWED_DIRECTORIES=/Users/username/Documents,/Users/username/Downloads
+LOCAL_FILE_ALLOW_ABSOLUTE_PATHS=true
+
+# 文件处理限制
+FILE_READER_MAX_FILE_SIZE_MB=20
+FILE_READER_MIN_CONTENT_LENGTH=10
+
+# 日志级别
+LOG_LEVEL=INFO
+```
+
+### OCR 配置（可选）
+
+如需图像 OCR 功能，配置视觉模型：
+
+```bash
+# 视觉模型配置
+LLM_VISION_BASE_URL=https://api.example.com
+LLM_VISION_API_KEY=sk-xxxxxxxxxx
+LLM_VISION_MODEL=qwen-vl-plus  # 或 gpt-4o
+```
+
+## 🔌 Claude Desktop 集成
+
+### 自动配置
+
+运行配置脚本：
+```bash
+./configure_claude.sh
+```
+
+### 手动配置
+
+编辑 `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS):
+
+```json
+{
+  "mcpServers": {
+    "mcp-local-reader": {
+      "command": "uv",
+      "args": [
+        "run",
+        "python",
+        "/path/to/mcp-local-reader/run_mcp_server.py"
+      ],
+      "env": {
+        "LOCAL_FILE_ALLOWED_DIRECTORIES": "/Users/username",
+        "LOCAL_FILE_ALLOW_ABSOLUTE_PATHS": "true"
+      }
+    }
+  }
+}
+```
+
+## 📖 使用示例
+
+在 Claude Desktop 中使用：
+
+```
+使用 read_local_file 工具读取 /Users/username/Documents/report.pdf
+
+将 /Users/username/data.xlsx 转换为 markdown 格式
+```
+
+## 🏗️ 项目结构
 
 ```
 mcp-local-reader/
 ├── src/
 │   ├── file_reader/         # 核心文件读取模块
 │   │   ├── core.py          # 文件读取器主类
-│   │   ├── models.py        # 数据模型定义
-│   │   ├── storage.py       # HTTP下载客户端
-│   │   ├── *_cache.py       # 缓存管理
-│   │   └── parsers/         # 解析器模块
-│   │       ├── pdf_parser.py    # PDF解析器
-│   │       ├── office_parser.py # Office文档解析器
-│   │       ├── text_parser.py   # 文本文件解析器
-│   │       ├── image_parser.py  # 图像OCR解析器
-│   │       └── archive_parser.py # 压缩文件解析器
-│   └── mcp_server.py        # MCP服务器实现
-├── requirements.txt
-└── pyproject.toml
+│   │   ├── parser_loader.py # 解析器懒加载管理
+│   │   ├── cache_manager.py # 统一缓存管理
+│   │   ├── storage/         # 存储层抽象
+│   │   └── parsers/         # 各类文件解析器
+│   └── mcp_server.py        # MCP 服务器实现
+├── tests/                   # 测试套件
+├── install.sh              # 安装脚本
+├── configure_claude.sh     # Claude 配置脚本
+└── requirements.txt        # Python 依赖
 ```
 
-## 🔧 安装部署
+## 🔨 开发指南
 
-### 环境依赖
+### 运行测试
 
 ```bash
-# 系统依赖（用于解析旧版Office文档）
-apt-get install libreoffice  # Ubuntu/Debian
-brew install libreoffice     # macOS
+# 运行所有测试
+uv run python tests/run_tests.py
+
+# 运行特定测试
+uv run python tests/run_tests.py --parsers
+uv run python tests/run_tests.py --core
 ```
 
-### Docker 部署（推荐）
+### 添加新的解析器
 
-```bash
-# 1. 构建镜像
-chmod +x build.sh && ./build.sh
+1. 在 `src/file_reader/parsers/` 创建新解析器
+2. 继承 `BaseParser` 类
+3. 在 `parser_loader.py` 中注册映射
 
-# 2. 配置环境变量
-cp env.example .env
-# 编辑 .env 文件配置 OPENAI_API_KEY 等
+## 🚀 性能优化
 
-# 3. 运行容器
-docker run -d --name mcp-file-reader \
-  -p 3004:3004 --env-file .env \
-  -v $(pwd)/cache:/app/cache \
-  mcp-file-reader:latest
-```
+- **缓存优化**: 统一缓存管理，默认 500MB 限制
+- **懒加载**: 按需加载解析器，减少启动时间
+- **并发控制**: 可配置最大工作线程数
+- **文件大小限制**: 防止处理超大文件
 
-### 本地安装
+## 📋 系统要求
 
-```bash
-# 1. 安装依赖
-pip install -r requirements.txt
+- Python 3.11+
+- macOS/Linux/Windows
+- 可选：LibreOffice（旧版 Office 文件）
+- 可选：Pandoc（特殊文档转换）
 
-# 2. 配置环境变量
-export OPENAI_API_KEY="your_openai_key"
-export DOWNLOAD_SERVICE_URL="http://localhost:8080"
+## 🤝 贡献指南
 
-# 3. 启动服务
-python run_server.py
-```
-## 📋 环境配置
-
-### 必需配置
-```bash
-# OpenAI API (图像OCR)
-OPENAI_API_KEY=your_openai_api_key
-OPENAI_MODEL=gpt-4o
-
-# 下载服务
-DOWNLOAD_SERVICE_URL=http://localhost:8080
-
-# 服务器配置
-SERVER_HOST=0.0.0.0
-SERVER_PORT=3004
-```
-
-### 可选配置
-```bash
-# 文件读取器配置
-FILE_READER_MAX_WORKERS=5                    # 最大并发工作线程数（推荐3-10，根据CPU核心数调整）
-FILE_READER_MAX_FILE_SIZE_MB=50              # 单个文件大小限制(MB)
-FILE_READER_MIN_CONTENT_LENGTH=10            # 最小内容长度
-FILE_READER_MAX_FILES_PER_REQUEST=10         # 单次请求最大文件数量
-
-# 缓存配置
-CACHE_ROOT_DIR=cache
-FILE_READER_CACHE_SIZE_MB=500
-PDF_IMAGE_CACHE_SIZE_MB=5000
-
-# 本地文件读取（非Docker环境）
-LOCAL_FILE_ALLOWED_DIRECTORIES=/Users/user/documents
-LOCAL_FILE_ALLOW_ABSOLUTE_PATHS=true
-```
-
-## 🔌 MCP 工具接口
-
-### `get_server_info` - 获取服务信息
-获取 MCP 文件读取器服务器的版本和基本信息
-
-### `read_files` - 读取远程文件
-通过 URL 下载并读取文件内容
-
-**参数:**
-- `urls`: 文件下载链接数组
-- `referer`: HTTP Referer 头（可选）
-- `max_size`: 单个文件大小限制(MB)（可选）
-- `use_proxy`: 是否使用代理（可选）
-- `max_retries`: 最大重试次数（可选）
-
-### `read_local_files` - 读取本地文件
-读取本地文件系统中的文件（仅非Docker环境）
-
-**参数:**
-- `file_paths`: 本地文件绝对路径数组
-- `max_size`: 文件大小限制(MB)（可选）
-
-### `upload_and_read_file` - 上传文件读取
-上传文件并读取内容（仅Docker环境）
-
-**参数:**
-- `filename`: 文件名
-- `content`: base64编码的文件内容
-- `max_size`: 文件大小限制(MB)（可选）
-- `cleanup_after`: 是否清理临时文件（默认true）
-
-### `get_reader_stats` - 获取统计信息
-获取文件读取器的运行统计信息
-
-## 📖 使用示例
-
-### MCP 客户端集成
-
-**配置示例**:
-```json
-  "mcpServers": {
-    "local-file-reader": {
-      "command": "bash",
-      "args": [
-        "/Users/ben/develop/tools/mcp-local-reader/start_mcp.sh"
-      ],
-      "env": {}
-    }
-  }
-```
-
-### 命令行测试
-
-```bash
-# 启动服务
-python run_server.py
-
-# 测试客户端
-python client_example.py
-```
-
-## ⚡ 技术特性
-
-- **高效解析**: PyMuPDF4LLM(PDF)、python-pptx/openpyxl(Office)、odfpy(OpenDocument)
-- **智能OCR**: OpenAI GPT-4o 视觉模型进行图像文字识别
-- **多级缓存**: 解析结果缓存和图片资源缓存，避免重复处理
-- **错误恢复**: 多层异常处理，优雅降级和详细错误分类
-- **并发处理**: 异步多线程处理，支持批量文件操作
-- **环境适配**: 自动检测Docker/本地环境，提供不同的文件访问方式
-
-## 📝 日志与监控
-
-- 组件化日志记录：每个解析器和组件独立日志文件
-- 统计信息收集：处理成功率、缓存命中率等关键指标
-- 错误分类追踪：详细的失败类型和原因记录
+欢迎提交 Issue 和 Pull Request！
 
 ## 📄 许可证
 
