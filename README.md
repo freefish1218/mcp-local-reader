@@ -4,6 +4,8 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![FastMCP](https://img.shields.io/badge/FastMCP-2.8%2B-green.svg)](https://github.com/jlowin/fastmcp)
 
+[中文版](README_zh.md) | [日本語](README_ja.md) | [Français](README_fr.md) | [Deutsch](README_de.md)
+
 **AI-Ready Document Converter** - Transform any local file into AI-optimized markdown format for seamless integration with Claude Desktop, Claude Code, and other MCP clients.
 
 **Intelligent Document Processing** - High-performance local file content extraction with advanced parsing for PDF, Office documents, images, and more. Automatically converts complex documents into clean, structured markdown that AI models can easily understand and process.

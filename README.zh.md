@@ -4,6 +4,8 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![FastMCP](https://img.shields.io/badge/FastMCP-2.8%2B-green.svg)](https://github.com/jlowin/fastmcp)
 
+[English](README.md) | [日本語](README_ja.md) | [Français](README_fr.md) | [Deutsch](README_de.md)
+
 **AI就绪文档转换器** - 将任何本地文件转换为AI优化的Markdown格式，以便与Claude Desktop、Claude Code和其他MCP客户端无缝集成。
 
 **智能文档处理** - 高性能本地文件内容提取，支持PDF、Office文档、图像等高级解析。自动将复杂文档转换为清晰、结构化的Markdown，使AI模型能够轻松理解和处理。

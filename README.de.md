@@ -4,6 +4,8 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![FastMCP](https://img.shields.io/badge/FastMCP-2.8%2B-green.svg)](https://github.com/jlowin/fastmcp)
 
+[English](README.md) | [中文版](README_zh.md) | [日本語](README_ja.md) | [Français](README_fr.md)
+
 **KI-Ready Dokumentenkonverter** - Wandeln Sie jede lokale Datei in ein KI-optimiertes Markdown-Format um für nahtlose Integration mit Claude Desktop, Claude Code und anderen MCP-Clients.
 
 **Intelligente Dokumentenverarbeitung** - Hochleistungs-Extraktion lokaler Dateiinhalte mit erweiterte Analyse für PDF, Office-Dokumente, Bilder und mehr. Konvertiert automatisch komplexe Dokumente in sauberes, strukturiertes Markdown, das KI-Modelle leicht verstehen und verarbeiten können.

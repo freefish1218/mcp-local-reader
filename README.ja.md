@@ -4,6 +4,8 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![FastMCP](https://img.shields.io/badge/FastMCP-2.8%2B-green.svg)](https://github.com/jlowin/fastmcp)
 
+[English](README.md) | [中文版](README_zh.md) | [Français](README_fr.md) | [Deutsch](README_de.md)
+
 **AI対応ドキュメントコンバーター** - あらゆるローカルファイルをAI最適化されたMarkdown形式に変換し、Claude Desktop、Claude Code、その他のMCPクライアントとのシームレスな統合を実現します。
 
 **インテリジェント文書処理** - PDF、Officeドキュメント、画像などの高度な解析による高性能ローカルファイルコンテンツ抽出。複雑なドキュメントを自動的にクリーンで構造化されたMarkdownに変換し、AIモデルが容易に理解・処理できるようにします。

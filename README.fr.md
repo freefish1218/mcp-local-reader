@@ -4,6 +4,8 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![FastMCP](https://img.shields.io/badge/FastMCP-2.8%2B-green.svg)](https://github.com/jlowin/fastmcp)
 
+[English](README.md) | [中文版](README_zh.md) | [日本語](README_ja.md) | [Deutsch](README_de.md)
+
 **Convertisseur de Documents Prêt pour l'IA** - Transformez n'importe quel fichier local en format Markdown optimisé pour l'IA pour une intégration transparente avec Claude Desktop, Claude Code et d'autres clients MCP.
 
 **Traitement Intelligent de Documents** - Extraction de contenu de fichiers locaux haute performance avec analyse avancée pour PDF, documents Office, images et plus. Convertit automatiquement des documents complexes en Markdown propre et structuré que les modèles d'IA peuvent facilement comprendre et traiter.
