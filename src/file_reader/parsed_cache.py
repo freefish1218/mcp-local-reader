@@ -1,6 +1,6 @@
 """
 解析结果缓存管理器
-负责管理文档解析结果的缓存
+使用统一缓存系统管理文档解析结果
 """
 
 import os
@@ -9,31 +9,24 @@ import hashlib
 import time
 from typing import Dict, Any, Optional
 
-from diskcache import Cache
-
+from .cache_manager import cache_manager
 from .utils import get_logger
 
 
 class ParsedContentCache:
-    """解析结果缓存管理器"""
+    """解析结果缓存管理器 - 使用统一缓存系统"""
 
     def __init__(self):
         """初始化解析结果缓存管理器"""
         self.logger = get_logger("parsed_cache")
-        
-        # 初始化解析结果缓存
-        cache_root = os.getenv("CACHE_ROOT_DIR", "cache")
-        cache_dir = os.path.join(cache_root, "parsed_content")
-        cache_size_mb = int(os.getenv("PARSED_CONTENT_CACHE_SIZE_MB", "2000"))
-        cache_size_bytes = cache_size_mb * 1024 * 1024
-        
-        self.cache = Cache(cache_dir, size_limit=cache_size_bytes)
+        self.cache_mgr = cache_manager
+        self.namespace = "parsed"
         
         # 缓存有效期（天）
-        self.expire_days = int(os.getenv("CACHE_EXPIRE_DAYS", "90"))
+        self.expire_days = int(os.getenv("CACHE_EXPIRE_DAYS", "30"))
         self.expire_seconds = self.expire_days * 24 * 3600
         
-        self.logger.info(f"解析结果缓存初始化完成 - 目录: {cache_dir}, 大小: {cache_size_mb}MB, 有效期: {self.expire_days}天")
+        self.logger.info(f"解析结果缓存初始化完成 - 使用统一缓存系统, 有效期: {self.expire_days}天")
         
 
     def get_cache_key(self, file_content: bytes, parser_name: str, parser_version: str, 
@@ -77,7 +70,7 @@ class ParsedContentCache:
             缓存的解析结果，未找到返回None
         """
         try:
-            cached_data = self.cache.get(cache_key)
+            cached_data = self.cache_mgr.get(self.namespace, cache_key)
             if cached_data:
                 self.logger.debug(f"解析结果缓存命中: {cache_key}")
                 return cached_data
@@ -117,7 +110,7 @@ class ParsedContentCache:
             }
             
             # 保存到缓存
-            self.cache.set(cache_key, cache_data, expire=self.expire_seconds)
+            self.cache_mgr.set(self.namespace, cache_key, cache_data, expire=self.expire_seconds)
             
             self.logger.debug(f"解析结果已缓存: {cache_key}, 内容长度: {cache_data['content_length']}")
             return True
@@ -129,9 +122,8 @@ class ParsedContentCache:
     def clear_cache(self):
         """清理所有解析结果缓存"""
         try:
-            if self.cache:
-                self.cache.clear()
-                self.logger.info("解析结果缓存已清理")
+            self.cache_mgr.clear_namespace(self.namespace)
+            self.logger.info("解析结果缓存已清理")
         except Exception as e:
             self.logger.error(f"清理解析结果缓存失败: {e}")
 
@@ -143,15 +135,10 @@ class ParsedContentCache:
             parser_name: 解析器名称
         """
         try:
-            keys_to_delete = []
-            for key in self.cache:
-                if key.startswith(f"parsed:") and f":{parser_name}:v" in key:
-                    keys_to_delete.append(key)
-            
-            for key in keys_to_delete:
-                del self.cache[key]
-            
-            self.logger.info(f"已清理 {parser_name} 解析器的 {len(keys_to_delete)} 个缓存项")
+            # 注：统一缓存不支持按模式删除，暂时清空整个命名空间
+            # 未来可以考虑在统一缓存中实现模式匹配删除
+            self.logger.warning(f"统一缓存暂不支持按解析器清理，将清空所有解析缓存")
+            self.cache_mgr.clear_namespace(self.namespace)
             
         except Exception as e:
             self.logger.error(f"清理解析器缓存失败: {parser_name}, 错误: {e}")

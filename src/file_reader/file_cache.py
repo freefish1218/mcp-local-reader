@@ -1,14 +1,13 @@
 """
 文件缓存管理器
-专门管理压缩包中提取的文件的缓存
+使用统一缓存系统管理压缩包中提取的文件
 """
 
 import os
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Tuple
 
-from diskcache import Cache
-
+from .cache_manager import cache_manager
 from .utils import get_logger
 
 
@@ -20,19 +19,14 @@ class FileCacheManager:
         初始化文件缓存管理器
         """
         self.logger = get_logger("file_cache")
+        self.cache_mgr = cache_manager
+        self.namespace = "archive"
         
-        # 初始化统一的文件缓存
-        cache_root = os.getenv("CACHE_ROOT_DIR", "cache")
-        file_cache_dir = os.path.join(cache_root, "archive_files")
-        cache_size_mb = int(os.getenv("ARCHIVE_FILE_CACHE_SIZE_MB", "2000"))
-        cache_size_bytes = cache_size_mb * 1024 * 1024
-
         # 计算缓存过期时间
-        expire_days = int(os.getenv("CACHE_EXPIRE_DAYS", "90"))
-        expire_seconds = expire_days * 24 * 3600
-                
-        self.cache = Cache(file_cache_dir, size_limit=cache_size_bytes, expire=expire_seconds)
-        self.logger.info(f"压缩包文件缓存初始化完成 - 目录: {file_cache_dir}, 大小: {cache_size_mb}MB, 有效期: {expire_days}天")
+        expire_days = int(os.getenv("CACHE_EXPIRE_DAYS", "30"))
+        self.expire_seconds = expire_days * 24 * 3600
+        
+        self.logger.info(f"压缩包文件缓存初始化完成 - 使用统一缓存系统, 有效期: {expire_days}天")
 
     def cache_archive_files(self, files: List[Path], doc_info: Dict[str, Any]) -> Tuple[str, List[Dict[str, Any]]]:
         """
@@ -179,7 +173,6 @@ class FileCacheManager:
 
     def clear_cache(self):
         """清空文件缓存"""
-        if self.cache:
-            self.cache.clear()
-            self.logger.info("压缩包文件缓存已清空")
+        self.cache_mgr.clear_namespace(self.namespace)
+        self.logger.info("压缩包文件缓存已清空")
 

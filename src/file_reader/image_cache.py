@@ -1,6 +1,6 @@
 """
 文档图片缓存管理器
-统一管理所有文档类型的图片提取和缓存
+使用统一缓存系统管理所有文档类型的图片提取和缓存
 """
 
 import os
@@ -8,8 +8,7 @@ import time
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Tuple
 
-from diskcache import Cache
-
+from .cache_manager import cache_manager
 from .utils import get_logger
 
 
@@ -21,19 +20,14 @@ class ImageCacheManager:
         初始化图片缓存管理器
         """
         self.logger = get_logger("image_cache")
+        self.cache_mgr = cache_manager
+        self.namespace = "image"
         
-        # 初始化统一的图片缓存
-        cache_root = os.getenv("CACHE_ROOT_DIR", "cache")
-        image_cache_dir = os.path.join(cache_root, "document_images")
-        cache_size_mb = int(os.getenv("IMAGE_FILE_CACHE_SIZE_MB", "1000"))
-        cache_size_bytes = cache_size_mb * 1024 * 1024
-
         # 计算缓存过期时间
-        expire_days = int(os.getenv("CACHE_EXPIRE_DAYS", "90"))
-        expire_seconds = expire_days * 24 * 3600
-                
-        self.cache = Cache(image_cache_dir, size_limit=cache_size_bytes, expire=expire_seconds)
-        self.logger.info(f"文档图片缓存初始化完成 - 目录: {image_cache_dir}, 大小: {cache_size_mb}MB, 有效期: {expire_days}天")
+        expire_days = int(os.getenv("CACHE_EXPIRE_DAYS", "30"))
+        self.expire_seconds = expire_days * 24 * 3600
+        
+        self.logger.info(f"文档图片缓存初始化完成 - 使用统一缓存系统, 有效期: {expire_days}天")
 
     def cache_document_images(self, image_files: List[Path], doc_info: Dict[str, Any]) -> Tuple[str, List[Dict[str, Any]]]:
         """
@@ -187,7 +181,7 @@ class ImageCacheManager:
                 'metadata': metadata or {}
             }
             
-            self.cache[image_key] = cache_value
+            self.cache_mgr.set(self.namespace, image_key, cache_value, expire=self.expire_seconds)
             self.logger.debug(f"图片已缓存: {image_key}")
             return True
             
@@ -206,7 +200,7 @@ class ImageCacheManager:
             (图片数据, 元数据) 的元组，如果不存在则返回 (None, None)
         """
         try:
-            cache_value = self.cache.get(image_key)
+            cache_value = self.cache_mgr.get(self.namespace, image_key)
             if cache_value:
                 return cache_value.get('data'), cache_value.get('metadata', {})
             return None, None
@@ -226,8 +220,7 @@ class ImageCacheManager:
             是否删除成功
         """
         try:
-            if image_key in self.cache:
-                del self.cache[image_key]
+            if self.cache_mgr.delete(self.namespace, image_key):
                 self.logger.debug(f"已删除缓存图片: {image_key}")
                 return True
             return False
@@ -244,7 +237,7 @@ class ImageCacheManager:
             是否清空成功
         """
         try:
-            self.cache.clear()
+            self.cache_mgr.clear_namespace(self.namespace)
             self.logger.info("图片缓存已清空")
             return True
             
