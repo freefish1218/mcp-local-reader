@@ -24,6 +24,10 @@ odfpy>=1.4.1
 # 图像处理（OCR用）
 Pillow>=10.4.0
 
+# 测试依赖
+pytest>=8.0.0
+pytest-asyncio>=0.24.0
+
 # 特别说明
 # 需安装 libreoffice 才能解析 .doc/.ppt 文件
 # 需安装 pandoc 解析 .doc/.odt/.rtf/.epub 文件

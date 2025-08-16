@@ -7,6 +7,7 @@
 import os
 import sys
 import asyncio
+import pytest
 
 # 添加项目路径到 Python 路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
@@ -16,6 +17,7 @@ from file_reader.core import FileReader
 from file_reader.models import LocalReadRequest
 
 
+@pytest.mark.asyncio
 async def test_improved_error_messages():
     """测试改进的错误信息"""
     print("🔧 测试改进的错误信息")
@@ -38,20 +40,24 @@ async def test_improved_error_messages():
     # 创建文件读取器
     reader = FileReader(
         storage_client=client,
-        max_workers=1,
         max_file_size=10 * 1024 * 1024,  # 10MB
         min_content_length=10
     )
     
     # 测试第一个文件
     try:
-        result = await reader._process_single_file_async("tests/files/test.pptx", 10 * 1024 * 1024)
-        if result:
-            success, error_msg, error_type = result
-            print(f"  📄 test.pptx:")
-            print(f"    成功: {success}")
-            print(f"    错误类型: {error_type}")
-            print(f"    错误信息: {error_msg}")
+        request = LocalReadRequest(
+            file_paths=["tests/files/test.pptx"],
+            max_size=10 * 1024 * 1024  # 10MB
+        )
+        result = await reader.read_file(request)
+        print(f"  📄 test.pptx:")
+        print(f"    成功文件数: {len(result.contents)}")
+        print(f"    失败文件数: {len(result.failed)}")
+        if result.failed:
+            failed_file = result.failed[0]
+            print(f"    错误类型: {failed_file.type}")
+            print(f"    错误信息: {failed_file.error_message}")
     except Exception as e:
         print(f"  ❌ test.pptx 测试异常: {e}")
     
@@ -64,14 +70,13 @@ async def test_improved_error_messages():
     
     reader2 = FileReader(
         storage_client=client2,
-        max_workers=1,
         max_file_size=100 * 1024 * 1024,  # 100MB
         min_content_length=10
     )
     
     # 使用异步方法测试文件读取
-    request = ReadRequest(
-        resource_ids=["tests/files/test.pptx"],
+    request = LocalReadRequest(
+        file_paths=["tests/files/test.pptx"],
         max_size=5 * 1024 * 1024  # 5MB请求限制
     )
     
@@ -87,13 +92,13 @@ async def test_improved_error_messages():
 
     print(f"\n📏 测试场景3: 正常工作场景（100MB限制）")
     # 测试正常工作的场景
-    request3 = ReadRequest(
-        resource_ids=["tests/files/test.pptx"],
+    request3 = LocalReadRequest(
+        file_paths=["tests/files/test.pptx"],
         max_size=100 * 1024 * 1024  # 100MB请求限制
     )
     
     try:
-        response = await reader2.read_files(request3)
+        response = await reader2.read_file(request3)
         
         if response.contents:
             content = response.contents[0]

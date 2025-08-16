@@ -1,0 +1,163 @@
+name: Bug Report
+description: File a bug report to help us improve MCP-LOCAL-Reader
+title: "[Bug]: "
+labels: ["bug", "triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! 
+        
+        Please search existing issues before creating a new one to avoid duplicates.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: Describe the issue you encountered...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Please provide detailed steps to reproduce the issue.
+      placeholder: |
+        1. Configure MCP server with...
+        2. Try to read file...
+        3. See error...
+      value: |
+        1. 
+        2. 
+        3. 
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: Describe what should have happened...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
+      placeholder: Describe what actually happened...
+    validations:
+      required: true
+
+  - type: textarea
+    id: error-output
+    attributes:
+      label: Error Output
+      description: Please paste any error messages or logs (with sensitive information removed).
+      render: shell
+      placeholder: Paste error messages here...
+
+  - type: dropdown
+    id: file-type
+    attributes:
+      label: File Type
+      description: What type of file were you trying to process?
+      options:
+        - PDF
+        - Microsoft Word (.doc/.docx)
+        - Microsoft Excel (.xls/.xlsx)
+        - Microsoft PowerPoint (.ppt/.pptx)
+        - OpenDocument (ODT/ODS/ODP)
+        - Image (PNG/JPG/etc.)
+        - Archive (ZIP/TAR/etc.)
+        - Text file
+        - Other (specify in description)
+        - Not applicable
+
+  - type: input
+    id: file-size
+    attributes:
+      label: File Size
+      description: Approximate size of the file causing the issue
+      placeholder: e.g., 5MB, 100KB
+
+  - type: dropdown
+    id: operating-system
+    attributes:
+      label: Operating System
+      description: What operating system are you using?
+      options:
+        - macOS
+        - Linux (Ubuntu)
+        - Linux (other)
+        - Windows
+        - Other (specify in description)
+    validations:
+      required: true
+
+  - type: input
+    id: python-version
+    attributes:
+      label: Python Version
+      description: What version of Python are you using?
+      placeholder: e.g., 3.11.5
+    validations:
+      required: true
+
+  - type: input
+    id: package-version
+    attributes:
+      label: MCP-LOCAL-Reader Version
+      description: What version of MCP-LOCAL-Reader are you using?
+      placeholder: e.g., 1.1.0, latest from main branch
+
+  - type: dropdown
+    id: mcp-client
+    attributes:
+      label: MCP Client
+      description: Which MCP client are you using?
+      options:
+        - Claude Desktop
+        - Claude Code
+        - Other MCP client
+        - Testing directly
+
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Configuration
+      description: Please share your relevant configuration (remove sensitive information like API keys).
+      render: bash
+      placeholder: |
+        # .env file contents (remove sensitive data)
+        LOCAL_FILE_ALLOWED_DIRECTORIES=/path/to/files
+        TOTAL_CACHE_SIZE_MB=500
+        ...
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here.
+      placeholder: Any additional information that might help us understand the issue...
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please verify you have completed these steps before submitting.
+      options:
+        - label: I have searched existing issues to ensure this is not a duplicate
+          required: true
+        - label: I have checked the [documentation](https://github.com/freefish1218/mcp-local-reader/blob/main/README.md) for solutions
+          required: true
+        - label: I have tested with the latest version available
+          required: false
+        - label: I have removed any sensitive information from logs and configuration
+          required: true

@@ -1,14 +1,14 @@
-# MCP Local File Reader
+# MCP-LOCAL-Reader
 
-🤖 **AI-Ready Document Converter** - Transform any local file into AI-optimized markdown format for seamless integration with Claude Desktop, Claude Code, and other MCP clients.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![FastMCP](https://img.shields.io/badge/FastMCP-2.8%2B-green.svg)](https://github.com/jlowin/fastmcp)
 
-⚡ **Intelligent Document Processing** - High-performance local file content extraction with advanced parsing for PDF, Office documents, images, and more. Automatically converts complex documents into clean, structured markdown that AI models can easily understand and process.
+**AI-Ready Document Converter** - Transform any local file into AI-optimized markdown format for seamless integration with Claude Desktop, Claude Code, and other MCP clients.
 
-## 🎯 Core Value: AI-Ready Document Conversion
+**Intelligent Document Processing** - High-performance local file content extraction with advanced parsing for PDF, Office documents, images, and more. Automatically converts complex documents into clean, structured markdown that AI models can easily understand and process.
 
-**Transform ANY document format into perfectly structured markdown** - The key differentiator is our intelligent conversion engine that understands document structure and outputs markdown optimized for AI processing. No more wrestling with unstructured text or losing formatting context.
-
-## 🌟 Why Choose MCP Local File Reader?
+## Features
 
 ### 📄 **AI-Optimized File Processing**
 - **PDF Documents**: Advanced parsing with PyMuPDF4LLM → Clean markdown output
@@ -30,60 +30,31 @@
 - **File Size Limits**: Prevent DoS with configurable size restrictions
 - **Local-First**: No data leaves your machine - complete privacy
 
-## 📋 Quick Setup
+## Quick Start
 
-### Claude Desktop (Recommended)
+### Prerequisites
 
-**One-command setup:**
+- Python 3.11+
+- [uv package manager](https://docs.astral.sh/uv/)
+
+### Installation
+
+#### Option 1: One-Command Setup (Recommended)
+
 ```bash
 # Clone and auto-configure
 git clone https://github.com/freefish1218/mcp-local-reader.git
 cd mcp-local-reader
 chmod +x install.sh && ./install.sh
-chmod +x configure_claude.sh && ./configure_claude.sh
 ```
 
-**Manual configuration in `claude_desktop_config.json`:**
-```json
-{
-  "mcpServers": {
-    "mcp-local-reader": {
-      "command": "uv",
-      "args": [
-        "run", 
-        "python", 
-        "/absolute/path/to/mcp-local-reader/run_mcp_server.py"
-      ],
-      "env": {
-        "LOCAL_FILE_ALLOWED_DIRECTORIES": "/Users/username"
-      }
-    }
-  }
-}
-```
+The installer will guide you through three installation modes:
 
-### Claude Code
+1. **Minimal**: PDF and basic text files only (smallest footprint)
+2. **Standard**: Office documents support, no OCR (recommended)
+3. **Complete**: All features including OCR and archive processing
 
-Add to `.claude/claude_config.json`:
-```json
-{
-  "mcpServers": {
-    "mcp-local-reader": {
-      "command": "uv",
-      "args": [
-        "run", 
-        "python", 
-        "/absolute/path/to/mcp-local-reader/run_mcp_server.py"
-      ],
-      "env": {
-        "LOCAL_FILE_ALLOWED_DIRECTORIES": "/Users/username"
-      }
-    }
-  }
-}
-```
-
-### Manual Installation
+#### Option 2: Manual Installation
 
 ```bash
 # Install uv package manager
@@ -102,7 +73,56 @@ cp env.example .env
 uv run python run_mcp_server.py
 ```
 
-## 🛠 Usage
+### Configuration for Claude Desktop
+
+#### Automatic Configuration
+```bash
+chmod +x configure_claude.sh && ./configure_claude.sh
+```
+
+#### Manual Configuration
+Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or equivalent:
+
+```json
+{
+  "mcpServers": {
+    "mcp-local-reader": {
+      "command": "uv",
+      "args": [
+        "run", 
+        "python", 
+        "/absolute/path/to/mcp-local-reader/run_mcp_server.py"
+      ],
+      "env": {
+        "LOCAL_FILE_ALLOWED_DIRECTORIES": "/Users/username/Documents,/Users/username/Downloads"
+      }
+    }
+  }
+}
+```
+
+### Configuration for Claude Code
+
+Add to `.claude/claude_config.json`:
+```json
+{
+  "mcpServers": {
+    "mcp-local-reader": {
+      "command": "uv",
+      "args": [
+        "run", 
+        "python", 
+        "/absolute/path/to/mcp-local-reader/run_mcp_server.py"
+      ],
+      "env": {
+        "LOCAL_FILE_ALLOWED_DIRECTORIES": "/Users/username/Documents,/Users/username/Downloads"
+      }
+    }
+  }
+}
+```
+
+## Usage
 
 After setup, use these features directly in conversations:
 
@@ -133,7 +153,7 @@ Save /Users/username/analysis.xlsx as markdown in /Users/username/output/
 → Saves formatted tables and data as markdown
 ```
 
-## ⚙️ Configuration
+## Configuration
 
 ### Essential Settings (.env)
 
@@ -161,7 +181,7 @@ LLM_VISION_API_KEY=sk-your-api-key-here
 LLM_VISION_MODEL=gpt-4o  # or qwen-vl-plus
 ```
 
-## 🔧 Environment Variables
+## Environment Variables
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
@@ -171,7 +191,7 @@ LLM_VISION_MODEL=gpt-4o  # or qwen-vl-plus
 | `LOG_LEVEL` | ❌ | `INFO` | Logging level |
 | `LLM_VISION_API_KEY` | ❌ | - | OCR vision model API key |
 
-## 📝 Supported Tools
+## MCP Tools
 
 ### `read_local_file`
 
@@ -193,40 +213,55 @@ Convert files to AI-ready markdown and save to filesystem.
 | `max_size` | number | File size limit in MB (optional) |
 | `overwrite` | boolean | Overwrite existing files (default: false) |
 
-## ❓ FAQ
+## Supported File Types
 
-**Q: Files not reading correctly?**  
-A: Ensure `LOCAL_FILE_ALLOWED_DIRECTORIES` includes your file's directory.
+### Document Formats
+- **PDF**: `.pdf`
+- **Microsoft Office**: `.doc`, `.docx`, `.ppt`, `.pptx`, `.xls`, `.xlsx`
+- **OpenDocument**: `.odt`, `.ods`, `.odp`
+- **Text**: `.txt`, `.md`, `.rtf`, `.csv`, `.json`, `.xml`
 
-**Q: OCR not working for images?**  
-A: Configure `LLM_VISION_API_KEY` with a valid vision model API key (OpenAI GPT-4o or compatible).
+### Image Formats (with OCR)
+- **Common**: `.png`, `.jpg`, `.jpeg`, `.gif`, `.bmp`, `.tiff`
+- **Advanced**: `.webp`, `.svg`
 
-**Q: Want to improve processing speed?**  
-A: The smart cache automatically remembers processed files. Clear cache directory if you want fresh processing of all files.
+### Archive Formats
+- **Compressed**: `.zip`, `.tar`, `.tar.gz`, `.7z`
+- **Office**: `.docx`, `.xlsx`, `.pptx` (internally zip-based)
 
-**Q: Legacy Office files (.doc/.ppt) failing?**  
-A: Install LibreOffice: `brew install libreoffice` (macOS) or equivalent for your OS.
+### Special Formats
+- **E-books**: `.epub`
+- **Data**: `.csv`, `.tsv`, `.json`
 
-**Q: What file formats are supported?**  
-A: PDF, Word, Excel, PowerPoint, OpenDocument, images (with OCR), archives, text files, and more.
+## Architecture
 
-## 🏗 Development
+### Core Components
 
-### Prerequisites
+- **FileReader** (`src/file_reader/core.py`): Main orchestrator for file content extraction
+- **MCP Server** (`src/mcp_server.py`): FastMCP-based server providing MCP tools
+- **Parser System** (`src/file_reader/parsers/`): Specialized parsers for different file types
+- **Cache Manager** (`src/file_reader/cache_manager.py`): Unified caching system
+- **Storage Layer** (`src/file_reader/storage/`): Secure local file access
 
-- Python 3.11+
-- uv package manager
-- Optional: LibreOffice, Pandoc
+### Performance Optimizations
 
-### Setup
+1. **Unified Caching**: Single cache instance instead of multiple (reduced from ~6GB to 500MB default)
+2. **Lazy Loading**: Parsers loaded on-demand, not at startup
+3. **Dependency Optimization**: Optional dependencies for advanced features
+4. **Resource Limits**: Configurable memory and file size limits
+
+## Development
+
+### Setup Development Environment
 
 ```bash
 git clone https://github.com/freefish1218/mcp-local-reader.git
 cd mcp-local-reader
 uv sync
+source .venv/bin/activate  # On Unix/macOS
 ```
 
-### Testing
+### Running Tests
 
 ```bash
 # Run all tests
@@ -240,6 +275,9 @@ uv run python tests/run_tests.py --server     # MCP server
 
 # With coverage
 uv run python tests/run_tests.py -c
+
+# Alternative pytest usage
+PYTHONPATH=src uv run pytest tests/ -v
 ```
 
 ### Adding New Parsers
@@ -249,39 +287,55 @@ uv run python tests/run_tests.py -c
 3. Register in `parser_loader.py`
 4. Add tests in `tests/test_parsers.py`
 
-### Performance Profiling
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed development guidelines.
 
-```bash
-# Profile the server
-python -m cProfile -o profile.stats src/mcp_server.py
-
-# Analyze results
-python -m pstats profile.stats
-```
-
-## 🏎 Performance Features
+## Performance Characteristics
 
 - **Smart Caching**: Instantly access previously processed files without re-conversion
 - **Efficient Memory Use**: Optimized from 6GB+ to 500MB default cache size
 - **Lightning Startup**: 80% faster startup with on-demand component loading
 - **Parallel Processing**: Handle multiple document conversions simultaneously
 
-## 📋 System Requirements
+## System Requirements
 
 - **Python**: 3.11+
 - **OS**: macOS, Linux, Windows
 - **Memory**: 2GB+ recommended for large files
 - **Optional**: LibreOffice (legacy Office files), Pandoc (special conversions)
 
-## 📄 License
+## FAQ
 
-MIT License - see [LICENSE](LICENSE) file for details.
+**Q: Files not reading correctly?**  
+A: Ensure `LOCAL_FILE_ALLOWED_DIRECTORIES` includes your file's directory.
 
-## 📖 Links
+**Q: OCR not working for images?**  
+A: Configure `LLM_VISION_API_KEY` with a valid vision model API key (OpenAI GPT-4o or compatible).
 
-- Issues: [Report Issues](https://github.com/freefish1218/mcp-local-reader/issues)
-- Documentation: [CLAUDE.md](CLAUDE.md) for detailed development guide
+**Q: Want to improve processing speed?**  
+A: The smart cache automatically remembers processed files. Clear cache directory if you want fresh processing of all files.
 
-## 🤝 Contributing
+**Q: Legacy Office files (.doc/.ppt) failing?**  
+A: Install LibreOffice: `brew install --cask libreoffice` (macOS) or equivalent for your OS.
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+**Q: What file formats are supported?**  
+A: PDF, Word, Excel, PowerPoint, OpenDocument, images (with OCR), archives, text files, and more.
+
+## Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute to this project.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Links
+
+- **Issues**: [Report Issues](https://github.com/freefish1218/mcp-local-reader/issues)
+- **Documentation**: [CLAUDE.md](CLAUDE.md) for detailed development guide
+- **Model Context Protocol**: [Official MCP Documentation](https://modelcontextprotocol.io/)
+
+## Acknowledgments
+
+- Built with [FastMCP](https://github.com/jlowin/fastmcp)
+- PDF parsing powered by [PyMuPDF4LLM](https://github.com/pymupdf/PyMuPDF4LLM)
+- Caching system using [DiskCache](https://github.com/grantjenks/python-diskcache)

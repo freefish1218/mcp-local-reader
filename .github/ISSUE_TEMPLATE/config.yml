@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/freefish1218/mcp-local-reader/blob/main/README.md
+    about: Please check our documentation first for answers to common questions
+  - name: Development Guide
+    url: https://github.com/freefish1218/mcp-local-reader/blob/main/CLAUDE.md
+    about: Detailed technical documentation for developers
+  - name: Contributing Guidelines
+    url: https://github.com/freefish1218/mcp-local-reader/blob/main/CONTRIBUTING.md
+    about: Learn how to contribute to the project
+  - name: Model Context Protocol
+    url: https://modelcontextprotocol.io/
+    about: Official documentation for the Model Context Protocol

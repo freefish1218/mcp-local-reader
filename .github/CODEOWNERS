@@ -1,0 +1,37 @@
+# Global code owners
+# These users will be requested for review when anyone opens a pull request
+* @freefish1218
+
+# Core components - require review from core maintainers
+/src/file_reader/core.py @freefish1218
+/src/mcp_server.py @freefish1218
+/src/file_reader/cache_manager.py @freefish1218
+
+# Parser system - parser experts should review parser changes
+/src/file_reader/parsers/ @freefish1218
+/src/file_reader/parser_loader.py @freefish1218
+
+# Storage layer - security-sensitive code
+/src/file_reader/storage/ @freefish1218
+
+# Configuration and setup files
+install.sh @freefish1218
+configure_claude.sh @freefish1218
+pyproject.toml @freefish1218
+
+# Documentation - technical writers and maintainers
+*.md @freefish1218
+/docs/ @freefish1218
+
+# GitHub configuration
+/.github/ @freefish1218
+
+# Test suite - quality assurance team
+/tests/ @freefish1218
+
+# CI/CD and deployment
+/.github/workflows/ @freefish1218
+
+# Security-sensitive files
+.env.example @freefish1218
+requirements.txt @freefish1218

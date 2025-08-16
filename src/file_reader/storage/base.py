@@ -25,6 +25,19 @@ class BaseStorageClient(ABC):
             文件信息字典，失败返回None
         """
         pass
+
+    @abstractmethod
+    async def get_files_batch(self, request) -> Dict[str, bytes]:
+        """
+        批量读取文件内容
+        
+        Args:
+            request: 文件读取请求
+            
+        Returns:
+            文件路径到文件内容的字典
+        """
+        pass
     
     
     @abstractmethod

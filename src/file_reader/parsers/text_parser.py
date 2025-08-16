@@ -32,19 +32,42 @@ class TextParser(BaseParser):
         
         file_extension = file_extension.lower()
         
-        if file_extension not in ['.txt', '.md', '.markdown', '.json']:
-            return self._create_error_result(f"不支持的文本文件类型: {file_extension}")
+        # 支持的特殊格式
+        special_formats = {
+            '.md': self._parse_markdown,
+            '.markdown': self._parse_markdown,
+            '.json': self._parse_json,
+            '.rtf': self._parse_rtf,
+        }
+        
+        # 所有基于文本的文件扩展名（代码、配置、标记语言等）
+        text_based_extensions = [
+            '.txt', '.text',
+            # 代码文件
+            '.py', '.js', '.ts', '.jsx', '.tsx', '.java', '.c', '.cpp', '.h', '.hpp',
+            '.cs', '.rb', '.go', '.rs', '.php', '.swift', '.kt', '.sh', '.bash', '.zsh',
+            '.sql', '.r', '.m', '.pl', '.lua', '.vim',
+            # 配置文件
+            '.xml', '.yaml', '.yml', '.toml', '.ini', '.cfg', '.conf', '.properties',
+            '.env', '.gitignore', '.dockerignore',
+            # Web文件
+            '.html', '.htm', '.css', '.scss', '.sass', '.less',
+            # 数据文件
+            '.csv', '.tsv',
+        ]
         
         try:
             self.logger.info(f"开始解析文本文档: {file_extension}")
             
-            # 根据扩展名选择适合的解析方法
-            if file_extension == '.txt':
+            # 如果有特殊处理方法，使用对应的方法
+            if file_extension in special_formats:
+                if file_extension in ['.md', '.markdown']:
+                    return special_formats[file_extension](content, file_extension)
+                else:
+                    return special_formats[file_extension](content)
+            # 否则作为普通文本处理
+            elif file_extension in text_based_extensions:
                 return self._parse_text(content)
-            elif file_extension in ['.md', '.markdown']:
-                return self._parse_markdown(content, file_extension)
-            elif file_extension == '.json':
-                return self._parse_json(content)
             else:
                 return self._create_error_result(f"不支持的文本文件类型: {file_extension}")
             
@@ -263,4 +286,66 @@ class TextParser(BaseParser):
         except Exception as e:
             self.logger.error(f"解析JSON文档失败: {e}")
             return self._create_error_result(f"解析JSON文档失败: {e}")
+
+    def _parse_rtf(self, content: bytes) -> ParseResult:
+        """
+        解析RTF文件
+        
+        Args:
+            content: 文件内容字节数据
+            
+        Returns:
+            解析结果对象
+        """
+        try:
+            self.logger.info("解析RTF文件")
+            
+            # RTF文件通常使用ASCII或latin-1编码
+            try:
+                rtf_content = content.decode('latin-1')
+            except UnicodeDecodeError:
+                try:
+                    rtf_content = content.decode('utf-8')
+                except UnicodeDecodeError:
+                    rtf_content = content.decode('utf-8', errors='ignore')
+                    self.logger.warning("RTF文件编码有问题，使用强制解码")
+            
+            if not rtf_content or not rtf_content.strip():
+                return self._create_error_result("RTF文档内容为空")
+            
+            # 简单的RTF文本提取
+            # RTF格式： {\rtf1\ansi ... {text content} ...}
+            import re
+            
+            # 移除RTF控制字符和格式化代码
+            # 保留大括号内的纯文本内容
+            text_content = ""
+            
+            # 基本的RTF解析：提取可读文本
+            # 移除反斜杠开头的控制序列
+            rtf_cleaned = re.sub(r'\\[a-zA-Z]+\d*\s?', ' ', rtf_content)
+            
+            # 移除格式化字符
+            rtf_cleaned = re.sub(r'[{}]', ' ', rtf_cleaned)
+            
+            # 清理空白字符
+            rtf_cleaned = re.sub(r'\s+', ' ', rtf_cleaned).strip()
+            
+            if not rtf_cleaned:
+                return self._create_error_result("RTF文档中未找到可读文本")
+            
+            # 创建元数据
+            metadata = {
+                "parser": "rtf_basic",
+                "size": len(content),
+                "original_format": "rtf",
+                "output_format": "text"
+            }
+            
+            self.logger.info("RTF文档解析成功")
+            return self._create_success_result(rtf_cleaned, "rtf", metadata)
+            
+        except Exception as e:
+            self.logger.error(f"解析RTF文档失败: {e}")
+            return self._create_error_result(f"解析RTF文档失败: {e}")
 

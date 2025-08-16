@@ -204,6 +204,63 @@ class LocalFileStorageClient(BaseStorageClient):
         return hashlib.md5(combined.encode()).hexdigest()
     
     
+    async def get_files_batch(self, request) -> Dict[str, bytes]:
+        """
+        批量读取文件内容
+        
+        Args:
+            request: 文件读取请求
+            
+        Returns:
+            文件路径到文件内容的字典
+        """
+        results = {}
+        self._read_errors = {}
+        
+        for file_path in request.file_paths:
+            try:
+                # 验证文件路径
+                safe_path = self._validate_file_path(file_path)
+                if not safe_path:
+                    self._read_errors[file_path] = {
+                        "error_type": "SECURITY_ERROR", 
+                        "error_message": f"路径验证失败或不在允许的目录内: {file_path}"
+                    }
+                    continue
+                
+                # 检查文件是否存在
+                if not os.path.exists(safe_path):
+                    self._read_errors[file_path] = {
+                        "error_type": "NOT_FOUND",
+                        "error_message": f"文件不存在: {file_path}"
+                    }
+                    continue
+                    
+                # 检查文件大小
+                file_size = os.path.getsize(safe_path)
+                max_size = getattr(request, 'max_size', 20 * 1024 * 1024)  # 默认20MB
+                if file_size > max_size:
+                    self._read_errors[file_path] = {
+                        "error_type": "SIZE_EXCEEDED",
+                        "error_message": f"文件大小({file_size}字节)超过限制({max_size}字节)"
+                    }
+                    continue
+                
+                # 读取文件内容
+                with open(safe_path, 'rb') as f:
+                    file_content = f.read()
+                results[file_path] = file_content
+                self.logger.debug(f"成功读取文件: {file_path}, 大小: {len(file_content)}字节")
+                
+            except Exception as e:
+                self.logger.error(f"读取文件失败: {file_path}, 错误: {e}")
+                self._read_errors[file_path] = {
+                    "error_type": "READ_ERROR",
+                    "error_message": f"读取失败: {e}"
+                }
+        
+        return results
+
     def clear_cache(self):
         """清除本地文件缓存"""
         try:

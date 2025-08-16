@@ -143,6 +143,41 @@ class ParsedContentCache:
         except Exception as e:
             self.logger.error(f"清理解析器缓存失败: {parser_name}, 错误: {e}")
 
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """
+        获取缓存统计信息
+        
+        Returns:
+            包含缓存统计信息的字典
+        """
+        try:
+            # 获取底层缓存统计
+            cache_stats = self.cache_mgr.get_stats()
+            
+            # 返回标准化的统计信息
+            return {
+                "total_items": cache_stats.get("size", 0),
+                "total_content_size": cache_stats.get("volume", 0),
+                "cache_size_mb": cache_stats.get("size_mb", 0),
+                "cache_hits": 0,  # 统一缓存不提供此统计
+                "cache_misses": 0,  # 统一缓存不提供此统计
+                "cache_writes": 0,  # 统一缓存不提供此统计
+                "cache_errors": 0,  # 统一缓存不提供此统计
+                "hit_rate": cache_stats.get("hit_rate", 0)
+            }
+        except Exception as e:
+            self.logger.error(f"获取缓存统计失败: {e}")
+            return {
+                "total_items": 0,
+                "total_content_size": 0,
+                "cache_size_mb": 0,
+                "cache_hits": 0,
+                "cache_misses": 0,
+                "cache_writes": 0,
+                "cache_errors": 1,
+                "hit_rate": 0
+            }
+
 
 
 # 全局解析缓存实例

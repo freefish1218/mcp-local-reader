@@ -1,0 +1,139 @@
+name: Feature Request
+description: Suggest an idea or improvement for MCP-LOCAL-Reader
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a new feature! 
+        
+        Please search existing issues and discussions to see if your idea has already been proposed.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Is your feature request related to a problem? Please describe the problem you're trying to solve.
+      placeholder: I'm always frustrated when... / I need to... / Currently it's difficult to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like to see implemented.
+      placeholder: I would like to be able to... / The feature should work by...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: feature-category
+    attributes:
+      label: Feature Category
+      description: What type of feature is this?
+      options:
+        - New file format support
+        - Performance improvement
+        - Security enhancement
+        - User experience improvement
+        - Developer experience improvement
+        - Configuration option
+        - Integration with other tools
+        - Documentation improvement
+        - Other (specify in description)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Critical (blocks current work)
+        - High (would significantly improve workflow)
+        - Medium (would be nice to have)
+        - Low (minor convenience)
+
+  - type: textarea
+    id: use-cases
+    attributes:
+      label: Use Cases
+      description: Describe specific scenarios where this feature would be useful.
+      placeholder: |
+        1. When processing documents with...
+        2. In workflows where...
+        3. For users who need to...
+      value: |
+        1. 
+        2. 
+        3. 
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Describe any alternative solutions or features you've considered.
+      placeholder: I've considered... / Another approach would be... / Currently I work around this by...
+
+  - type: textarea
+    id: technical-details
+    attributes:
+      label: Technical Implementation Ideas
+      description: If you have ideas about how this could be implemented, please share them.
+      placeholder: This could be implemented by... / Similar to how... / Would require...
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples or References
+      description: Do you have examples of this feature in other tools or libraries?
+      placeholder: Tool X does this by... / Similar to the feature in... / Reference implementation at...
+
+  - type: checkboxes
+    id: compatibility
+    attributes:
+      label: Compatibility Considerations
+      description: What compatibility aspects should be considered?
+      options:
+        - label: This should work across all supported operating systems
+        - label: This should not break existing functionality
+        - label: This should be optional/configurable
+        - label: This may require new dependencies
+        - label: This could impact performance
+
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: Contribution Interest
+      description: Would you be interested in contributing to this feature?
+      options:
+        - label: "Yes, I would like to implement this"
+        - label: "Yes, I could help with testing"
+        - label: "Yes, I could help with documentation"
+        - label: "Maybe, depending on complexity"
+        - label: "No, but I would use it"
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context, screenshots, mockups, or examples about the feature request.
+      placeholder: Any additional information that helps explain the feature...
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please verify you have completed these steps before submitting.
+      options:
+        - label: I have searched existing issues and discussions to ensure this is not a duplicate
+          required: true
+        - label: I have checked the [documentation](https://github.com/freefish1218/mcp-local-reader/blob/main/README.md) to ensure this feature doesn't already exist
+          required: true
+        - label: I have considered how this feature fits with the project's goals and scope
+          required: true

@@ -35,6 +35,53 @@ SUPPORTED_DOC_TYPES = [
     '.md', '.markdown',     # Markdown文档
     '.json',                # JSON文档
     
+    # 代码文件
+    '.py',                  # Python
+    '.js',                  # JavaScript
+    '.ts',                  # TypeScript
+    '.jsx',                 # React JSX
+    '.tsx',                 # React TSX
+    '.java',                # Java
+    '.c',                   # C
+    '.cpp',                 # C++
+    '.h',                   # C/C++ Header
+    '.hpp',                 # C++ Header
+    '.cs',                  # C#
+    '.rb',                  # Ruby
+    '.go',                  # Go
+    '.rs',                  # Rust
+    '.php',                 # PHP
+    '.swift',               # Swift
+    '.kt',                  # Kotlin
+    '.sh',                  # Shell Script
+    '.bash',                # Bash Script
+    '.zsh',                 # Zsh Script
+    '.sql',                 # SQL
+    '.r',                   # R
+    '.m',                   # MATLAB/Objective-C
+    '.pl',                  # Perl
+    '.lua',                 # Lua
+    '.vim',                 # Vim Script
+    
+    # 配置文件
+    '.xml',                 # XML
+    '.yaml', '.yml',        # YAML
+    '.toml',                # TOML
+    '.ini',                 # INI
+    '.cfg',                 # Config
+    '.conf',                # Configuration
+    '.properties',          # Properties
+    '.env',                 # Environment
+    '.gitignore',           # Git Ignore
+    '.dockerignore',        # Docker Ignore
+    
+    # Web文件
+    '.html', '.htm',        # HTML
+    '.css',                 # CSS
+    '.scss',                # SCSS
+    '.sass',                # Sass
+    '.less',                # Less
+    
     # 图像文件（支持OCR文字识别）
     '.jpg', '.jpeg',        # JPEG图像
     '.png',                 # PNG图像

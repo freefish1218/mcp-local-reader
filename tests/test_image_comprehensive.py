@@ -9,6 +9,7 @@ import os
 import sys
 import base64
 from pathlib import Path
+import pytest
 
 # 添加项目路径到 Python 路径
 project_root = Path(__file__).parent
@@ -121,6 +122,7 @@ async def create_test_images():
         return {}
 
 
+@pytest.mark.asyncio
 async def test_image_formats():
     """测试不同图像格式的支持"""
     print("\n=== 测试图像格式支持 ===")
@@ -138,6 +140,7 @@ async def test_image_formats():
         print(f"格式 {fmt}: {'支持' if not result.error or 'unstructured' not in result.error.lower() else '不支持'}")
 
 
+@pytest.mark.asyncio
 async def test_error_cases():
     """测试错误情况处理"""
     print("\n=== 测试错误情况处理 ===")
@@ -182,6 +185,7 @@ async def test_error_cases():
                 print(f"✗ 期望成功但失败了: {result.error}")
 
 
+@pytest.mark.asyncio
 async def test_comprehensive_parsing():
     """综合解析测试"""
     print("\n=== 综合解析测试 ===")
@@ -232,6 +236,7 @@ async def test_comprehensive_parsing():
     print(f"\n已清理 {len(test_images)} 个测试文件")
 
 
+@pytest.mark.asyncio
 async def test_temperature_effects():
     """测试温度参数的影响"""
     print("\n=== 测试温度参数影响 ===")

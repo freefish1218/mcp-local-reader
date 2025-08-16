@@ -11,6 +11,7 @@ from .parsers import PDFParser, OfficeParser, TextParser, ImageParser, ArchivePa
 from .utils import get_logger, format_file_size
 from .config import SUPPORTED_DOC_TYPES, IGNORED_TYPES
 from .parsed_cache import get_parsed_cache
+from .parser_loader import parser_loader
 
 
 class FileReader:
@@ -54,43 +55,20 @@ class FileReader:
             'archive': ArchiveParser()
         }
         
-        # 文件类型到解析器的映射
-        self.file_type_mapping = {
-            '.pdf': 'pdf',
-            '.doc': 'office',
-            '.docx': 'office',
-            '.xls': 'office', 
-            '.xlsx': 'office',
-            '.ppt': 'office',
-            '.pptx': 'office',
-            '.rtf': 'office',
-            '.odt': 'office',
-            '.ods': 'office',
-            '.odp': 'office',
-            '.csv': 'office',
-            '.epub': 'office',
-            '.txt': 'text',
-            '.md': 'text',   # Markdown文档使用TextParser，支持多种解析方式
-            '.markdown': 'text',  # Markdown文档的完整扩展名
-            '.json': 'text',  # JSON文档使用TextParser
-            '.jpg': 'image',
-            '.jpeg': 'image',
-            '.png': 'image',
-            '.gif': 'image',
-            '.bmp': 'image',
-            '.webp': 'image',
-            '.tiff': 'image',
-            # 压缩文件
-            '.zip': 'archive',
-            '.rar': 'archive', 
-            '.7z': 'archive',
-            '.tar': 'archive',
-            '.gz': 'archive',
-            '.tar.gz': 'archive',
-            '.tgz': 'archive',
-            '.tar.bz2': 'archive',
-            '.tbz2': 'archive'
-        }
+        # 构建文件类型到解析器类型的映射（从parser_loader动态获取）
+        self.file_type_mapping = {}
+        for ext, (module_path, class_name) in parser_loader.parser_mapping.items():
+            # 根据类名映射到解析器类型
+            if class_name == 'PDFParser':
+                self.file_type_mapping[ext] = 'pdf'
+            elif class_name == 'OfficeParser':
+                self.file_type_mapping[ext] = 'office'
+            elif class_name == 'TextParser':
+                self.file_type_mapping[ext] = 'text'
+            elif class_name == 'ImageParser':
+                self.file_type_mapping[ext] = 'image'
+            elif class_name == 'ArchiveParser':
+                self.file_type_mapping[ext] = 'archive'
         
         
         max_file_size_str = format_file_size(self.max_file_size) if self.max_file_size else "由请求控制"
@@ -128,7 +106,7 @@ class FileReader:
 
     async def read_file(self, request) -> ReadResponse:
         """
-        读取单个文件内容
+        读取文件内容（支持单个或多个文件）
         
         Args:
             request: 文件读取请求（LocalReadRequest）
@@ -136,53 +114,80 @@ class FileReader:
         Returns:
             读取响应结果
         """
-        file_path = request.file_paths[0]
-        self.logger.info(f"开始处理文件读取请求: {file_path}")
-        
         response = ReadResponse()
         
-        # 路径标准化和验证
-        normalized_path, error_message = self._normalize_and_validate_path(file_path)
-        if error_message:
-            self.logger.warning(f"无效的路径: {file_path}, 错误: {error_message}")
-            response.add_failure(file_path, FailureType.INVALID_URL, error_message)
-            return response
-        
-        # 检查解析缓存
-        cached_content = await self._check_parsed_cache(normalized_path, request)
-        if cached_content is not None:
-            self.logger.info(f"解析缓存命中: {file_path}")
-            # 检查缓存内容的长度
-            if len(cached_content) < self.min_content_length:
-                self.logger.error(f"缓存内容过短: {file_path}, 内容长度: {len(cached_content)}, 最小要求: {self.min_content_length}")
-                response.add_failure(file_path, FailureType.PARSE_ERROR, "提取的内容过短")
-            else:
-                response.add_content(file_path, cached_content)
+        # 检查是否有文件路径
+        if not request.file_paths:
+            self.logger.warning("文件路径列表为空")
+            # 仍然调用storage client以保持一致的接口调用
+            try:
+                await self.storage_client.get_files_batch(request)
+            except Exception:
+                pass  # 忽略空请求的错误
             return response
             
-        self.logger.info(f"解析缓存未命中，需要读取和解析: {file_path}")
+        self.logger.info(f"开始处理文件读取请求，共 {len(request.file_paths)} 个文件")
         
-        # 读取文件
+        # 使用存储客户端批量读取所有文件
         try:
-            with open(normalized_path, 'rb') as f:
-                file_content = f.read()
-            self.logger.debug(f"成功读取本地文件: {normalized_path}, 大小: {len(file_content)}字节")
+            files_data = await self.storage_client.get_files_batch(request)
         except Exception as e:
-            self.logger.error(f"读取本地文件失败: {normalized_path}, 错误: {e}")
-            response.add_failure(file_path, FailureType.OTHER, f"文件读取失败: {e}")
+            self.logger.error(f"批量读取文件失败: {e}")
+            # 如果批量读取失败，将所有文件标记为失败
+            for file_path in request.file_paths:
+                response.add_failure(file_path, FailureType.OTHER, f"文件读取失败: {e}")
             return response
-            
-        # 处理文件内容
-        max_size = getattr(request, 'max_size', 20 * 1024 * 1024)
-        success, content_or_error, error_type = await self._process_file_content(
-            normalized_path, file_content, max_size
-        )
         
-        if success:
-            response.add_content(file_path, content_or_error)
-        else:
-            response.add_failure(file_path, error_type, content_or_error)
-            
+        # 处理每个文件
+        for file_path in request.file_paths:
+            try:
+                # 路径标准化和验证
+                normalized_path, error_message = self._normalize_and_validate_path(file_path)
+                if error_message:
+                    self.logger.warning(f"无效的路径: {file_path}, 错误: {error_message}")
+                    response.add_failure(file_path, FailureType.INVALID_URL, error_message)
+                    continue
+        
+                # 检查解析缓存
+                cached_content = await self._check_parsed_cache(normalized_path, request)
+                if cached_content is not None:
+                    self.logger.info(f"解析缓存命中: {file_path}")
+                    # 检查缓存内容的长度
+                    if len(cached_content) < self.min_content_length:
+                        self.logger.error(f"缓存内容过短: {file_path}, 内容长度: {len(cached_content)}, 最小要求: {self.min_content_length}")
+                        response.add_failure(file_path, FailureType.PARSE_ERROR, "提取的内容过短")
+                    else:
+                        response.add_content(file_path, cached_content)
+                    continue
+                
+                # 检查文件是否成功读取
+                if file_path not in files_data:
+                    # 检查是否有读取错误
+                    if hasattr(self.storage_client, '_read_errors') and file_path in self.storage_client._read_errors:
+                        error_info = self.storage_client._read_errors[file_path]
+                        response.add_failure(file_path, FailureType.OTHER, error_info["error_message"])
+                    else:
+                        response.add_failure(file_path, FailureType.OTHER, f"文件读取失败: {file_path}")
+                    continue
+                
+                file_content = files_data[file_path]
+                self.logger.debug(f"成功读取本地文件: {file_path}, 大小: {len(file_content)}字节")
+                
+                # 处理文件内容
+                max_size = getattr(request, 'max_size', 20 * 1024 * 1024)
+                success, content_or_error, error_type = await self._process_file_content(
+                    file_path, file_content, max_size
+                )
+                
+                if success:
+                    response.add_content(file_path, content_or_error)
+                else:
+                    response.add_failure(file_path, error_type, content_or_error)
+                    
+            except Exception as e:
+                self.logger.error(f"处理文件失败: {file_path}, 错误: {e}")
+                response.add_failure(file_path, FailureType.OTHER, f"处理文件失败: {e}")
+        
         return response
     
     async def _process_file_content(self, resource_id: str, file_content: bytes, max_size: int) -> Optional[tuple]:

@@ -112,6 +112,9 @@ def normalize_content(content: str) -> str:
     lines = [line.rstrip() for line in lines]
     content = '\n'.join(lines)
     
+    # 规范化连续的空白字符为单个空格
+    content = re.sub(r'[ \t]+', ' ', content)
+    
     # 删除首尾空白
     content = content.strip()
     
