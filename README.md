@@ -72,7 +72,7 @@ cp env.example .env
 # Edit .env with your settings
 
 # Start server
-uv run python run_mcp_server.py
+uv run python mcp_server.py
 ```
 
 ### Configuration for Claude Desktop
@@ -93,7 +93,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) o
       "args": [
         "run", 
         "python", 
-        "/absolute/path/to/mcp-local-reader/run_mcp_server.py"
+        "/absolute/path/to/mcp-local-reader/mcp_server.py"
       ],
       "env": {
         "LOCAL_FILE_ALLOWED_DIRECTORIES": "/Users/username/Documents,/Users/username/Downloads"
@@ -114,7 +114,7 @@ Add to `.claude/claude_config.json`:
       "args": [
         "run", 
         "python", 
-        "/absolute/path/to/mcp-local-reader/run_mcp_server.py"
+        "/absolute/path/to/mcp-local-reader/mcp_server.py"
       ],
       "env": {
         "LOCAL_FILE_ALLOWED_DIRECTORIES": "/Users/username/Documents,/Users/username/Downloads"

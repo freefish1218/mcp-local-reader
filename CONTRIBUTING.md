@@ -76,7 +76,7 @@ TOTAL_CACHE_SIZE_MB=100  # Smaller cache for development
 uv run python tests/run_tests.py
 
 # Test MCP server startup
-uv run python run_mcp_server.py
+uv run python mcp_server.py
 ```
 
 ## Project Structure

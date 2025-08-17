@@ -23,13 +23,13 @@ MCP本地文件读取器服务器
 
 使用示例:
     # stdio模式 - 适用于Claude Desktop等工具集成
-    python run_mcp_server.py --stdio
+    python mcp_server.py --stdio
     
     # HTTP模式 - 适用于远程调用和Web集成  
-    python run_mcp_server.py --http
+    python mcp_server.py --http
     
     # HTTP模式自定义端口
-    python run_mcp_server.py --http --port 3002
+    python mcp_server.py --http --port 3002
 
 环境变量配置:
     LLM_VISION_API_KEY          视觉模型API密钥 (图像OCR必需)

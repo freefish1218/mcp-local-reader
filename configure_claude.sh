@@ -58,7 +58,7 @@ MCP_CONFIG=$(cat <<EOF
       "args": [
         "run",
         "python",
-        "$CURRENT_DIR/run_mcp_server.py"
+        "$CURRENT_DIR/mcp_server.py"
       ],
       "env": {
         "CACHE_ROOT_DIR": "$CURRENT_DIR/cache",
@@ -180,5 +180,5 @@ echo ""
 echo "手动测试服务器："
 echo "  cd $CURRENT_DIR"
 echo "  source .venv/bin/activate"
-echo "  uv run python run_mcp_server.py"
+echo "  uv run python mcp_server.py"
 echo ""

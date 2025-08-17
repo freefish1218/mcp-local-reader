@@ -72,7 +72,7 @@ cp env.example .env
 # 使用您的设置编辑.env
 
 # 启动服务器
-uv run python run_mcp_server.py
+uv run python mcp_server.py
 ```
 
 ### Claude Desktop配置
@@ -93,7 +93,7 @@ chmod +x configure_claude.sh && ./configure_claude.sh
       "args": [
         "run", 
         "python", 
-        "/absolute/path/to/mcp-local-reader/run_mcp_server.py"
+        "/absolute/path/to/mcp-local-reader/mcp_server.py"
       ],
       "env": {
         "LOCAL_FILE_ALLOWED_DIRECTORIES": "/Users/username/Documents,/Users/username/Downloads"
@@ -114,7 +114,7 @@ chmod +x configure_claude.sh && ./configure_claude.sh
       "args": [
         "run", 
         "python", 
-        "/absolute/path/to/mcp-local-reader/run_mcp_server.py"
+        "/absolute/path/to/mcp-local-reader/mcp_server.py"
       ],
       "env": {
         "LOCAL_FILE_ALLOWED_DIRECTORIES": "/Users/username/Documents,/Users/username/Downloads"
