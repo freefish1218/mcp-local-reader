@@ -72,7 +72,7 @@ cp env.example .env
 # .env mit Ihren Einstellungen bearbeiten
 
 # Server starten
-uv run python mcp_server.py
+./start_mcp.sh
 ```
 
 ### Konfiguration für Claude Desktop
@@ -89,12 +89,8 @@ Bearbeiten Sie `~/Library/Application Support/Claude/claude_desktop_config.json`
 {
   "mcpServers": {
     "mcp-local-reader": {
-      "command": "uv",
-      "args": [
-        "run", 
-        "python", 
-        "/absolute/path/to/mcp-local-reader/mcp_server.py"
-      ],
+      "command": "/absolute/path/to/mcp-local-reader/start_mcp.sh",
+      "args": [],
       "env": {
         "LOCAL_FILE_ALLOWED_DIRECTORIES": "/Users/username/Documents,/Users/username/Downloads"
       }
@@ -110,12 +106,8 @@ Zu `.claude/claude_config.json` hinzufügen:
 {
   "mcpServers": {
     "mcp-local-reader": {
-      "command": "uv",
-      "args": [
-        "run", 
-        "python", 
-        "/absolute/path/to/mcp-local-reader/mcp_server.py"
-      ],
+      "command": "/absolute/path/to/mcp-local-reader/start_mcp.sh",
+      "args": [],
       "env": {
         "LOCAL_FILE_ALLOWED_DIRECTORIES": "/Users/username/Documents,/Users/username/Downloads"
       }
