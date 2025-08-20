@@ -61,6 +61,7 @@ htmlcov/
 *.tmp
 *.temp
 temp/
+.playwright-mcp/
 
 # macOS
 .DS_Store
