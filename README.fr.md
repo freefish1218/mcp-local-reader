@@ -88,7 +88,7 @@ chmod +x configure_claude.sh && ./configure_claude.sh
 ```json
 {
   "mcpServers": {
-    "mcp-local-reader": {
+    "local-reader": {
       "command": "/absolute/path/to/mcp-local-reader/start_mcp.sh",
       "args": [],
       "env": {
@@ -105,7 +105,7 @@ Ajouter à `.claude/claude_config.json` :
 ```json
 {
   "mcpServers": {
-    "mcp-local-reader": {
+    "local-reader": {
       "command": "/absolute/path/to/mcp-local-reader/start_mcp.sh",
       "args": [],
       "env": {

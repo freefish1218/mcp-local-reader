@@ -88,7 +88,7 @@ Bearbeiten Sie `~/Library/Application Support/Claude/claude_desktop_config.json`
 ```json
 {
   "mcpServers": {
-    "mcp-local-reader": {
+    "local-reader": {
       "command": "/absolute/path/to/mcp-local-reader/start_mcp.sh",
       "args": [],
       "env": {
@@ -105,7 +105,7 @@ Zu `.claude/claude_config.json` hinzufügen:
 ```json
 {
   "mcpServers": {
-    "mcp-local-reader": {
+    "local-reader": {
       "command": "/absolute/path/to/mcp-local-reader/start_mcp.sh",
       "args": [],
       "env": {
