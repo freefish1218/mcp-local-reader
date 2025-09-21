@@ -80,7 +80,7 @@ class PDFParser(BaseParser):
                 image_format="png",  # 图片格式
                 dpi=150,  # 图片分辨率
                 force_text=True,  # 图片中的文本也显示在Markdown中
-                show_progress=True  # 显示处理进度，改善用户体验
+                show_progress=False  # 禁用进度显示，避免MCP服务器通信干扰
             )
             
             if not markdown_data:
