@@ -133,67 +133,67 @@ async def read_local_file(
     file_path: Annotated[str, "本地文件绝对路径，必须使用完整的绝对路径(如/Users/user/document.pdf)。支持格式：PDF、Office文档(doc/docx/xls/xlsx/ppt/pptx)、OpenDocument(odt/ods/odp)。不支持图片"],
     max_size: Annotated[Optional[int], "单个文件大小限制(MB)"] = 20,
 ) -> List[TextContent]:
-        """
-        读取本地文件系统中的文件内容（仅支持绝对路径）
-        
-        Args:
-            file_path: 本地文件绝对路径（必须使用绝对路径，如/Users/user/file.pdf）
-            max_size: 文件大小限制(MB)，为空时使用环境变量FILE_READER_MAX_FILE_SIZE_MB的默认值
-        
-        Returns:
-            文件内容字符串（markdown格式）
-        """
-        logger.info(f"收到本地文件内容读取请求: {file_path}")
+    """
+    读取本地文件系统中的文件内容（仅支持绝对路径）
 
-        try:
-            # URL解码文件路径（解决Agent传入URL编码路径的问题）
-            import urllib.parse
-            decoded_path = urllib.parse.unquote(file_path)
-            if decoded_path != file_path:
-                logger.debug(f"URL解码路径: {file_path} -> {decoded_path}")
-            file_path = decoded_path
-            
-            # 验证路径必须是绝对路径
-            if not os.path.isabs(file_path):
-                error_msg = f"路径格式错误: 必须使用绝对路径(以/开头)，当前路径'{file_path}'为相对路径"
-                logger.error(error_msg)
-                return [TextContent(type="text", text=f"错误: {error_msg}")]
-            
-            # 创建本地文件读取请求，如果传入了max_size则转换为字节数
-            kwargs = {
-                "file_paths": [file_path]  # 转换为数组格式
-            }
-            if max_size is not None:
-                kwargs["max_size"] = max_size * 1024 * 1024  # 转换MB为字节数
-            
-            request = LocalReadRequest(**kwargs)
-            
-            # 执行文件读取
-            reader_instance = get_local_file_reader()
-            response = await reader_instance.read_file(request)
-            
-            # 检查读取结果
-            if response.contents:
-                # 成功读取，直接返回文件内容
-                content = response.contents[0].content
-                logger.info(f"文件读取成功: {file_path}, 内容长度: {len(content)} 字符")
-                return [TextContent(type="text", text=content)]
-            elif response.failed:
-                # 读取失败，返回错误信息
-                failed_file = response.failed[0]
-                error_msg = f"文件读取失败: {failed_file.type.value} - {failed_file.error_message}"
-                logger.error(error_msg)
-                return [TextContent(type="text", text=f"错误: {error_msg}")]
-            else:
-                # 异常情况：既没有内容也没有失败记录
-                error_msg = "文件读取异常：未返回内容或错误信息"
-                logger.error(error_msg)
-                return [TextContent(type="text", text=f"错误: {error_msg}")]
-            
-        except Exception as e:
-            error_msg = f"文件读取处理异常: {str(e)}"
+    Args:
+        file_path: 本地文件绝对路径（必须使用绝对路径，如/Users/user/file.pdf）
+        max_size: 文件大小限制(MB)，为空时使用环境变量FILE_READER_MAX_FILE_SIZE_MB的默认值
+
+    Returns:
+        文件内容字符串（markdown格式）
+    """
+    logger.info(f"收到本地文件内容读取请求: {file_path}")
+
+    try:
+        # URL解码文件路径（解决Agent传入URL编码路径的问题）
+        import urllib.parse
+        decoded_path = urllib.parse.unquote(file_path)
+        if decoded_path != file_path:
+            logger.debug(f"URL解码路径: {file_path} -> {decoded_path}")
+        file_path = decoded_path
+
+        # 验证路径必须是绝对路径
+        if not os.path.isabs(file_path):
+            error_msg = f"路径格式错误: 必须使用绝对路径(以/开头)，当前路径'{file_path}'为相对路径"
             logger.error(error_msg)
             return [TextContent(type="text", text=f"错误: {error_msg}")]
+
+        # 创建本地文件读取请求，如果传入了max_size则转换为字节数
+        kwargs = {
+            "file_paths": [file_path]  # 转换为数组格式
+        }
+        if max_size is not None:
+            kwargs["max_size"] = max_size * 1024 * 1024  # 转换MB为字节数
+
+        request = LocalReadRequest(**kwargs)
+
+        # 执行文件读取
+        reader_instance = get_local_file_reader()
+        response = await reader_instance.read_file(request)
+
+        # 检查读取结果
+        if response.contents:
+            # 成功读取，直接返回文件内容
+            content = response.contents[0].content
+            logger.info(f"文件读取成功: {file_path}, 内容长度: {len(content)} 字符")
+            return [TextContent(type="text", text=content)]
+        elif response.failed:
+            # 读取失败，返回错误信息
+            failed_file = response.failed[0]
+            error_msg = f"文件读取失败: {failed_file.type.value} - {failed_file.error_message}"
+            logger.error(error_msg)
+            return [TextContent(type="text", text=f"错误: {error_msg}")]
+        else:
+            # 异常情况：既没有内容也没有失败记录
+            error_msg = "文件读取异常：未返回内容或错误信息"
+            logger.error(error_msg)
+            return [TextContent(type="text", text=f"错误: {error_msg}")]
+
+    except Exception as e:
+        error_msg = f"文件读取处理异常: {str(e)}"
+        logger.error(error_msg)
+        return [TextContent(type="text", text=f"错误: {error_msg}")]
 
 
 # 本地文件转换工具
