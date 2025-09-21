@@ -3,6 +3,7 @@
 负责协调各个组件完成文件内容提取
 """
 
+import asyncio
 from typing import Optional
 
 from .models import ReadResponse, FailureType
@@ -264,13 +265,26 @@ class FileReader:
             self.logger.error(f"处理文件失败: {resource_id}, 错误: {e}")
             return (False, f"处理异常: {str(e)}", FailureType.OTHER)
     
+    def _read_file_sync(self, file_path: str) -> bytes:
+        """
+        同步读取文件内容（供线程池调用）
+
+        Args:
+            file_path: 文件路径
+
+        Returns:
+            文件内容字节数据
+        """
+        with open(file_path, 'rb') as f:
+            return f.read()
+
     def _detect_file_type(self, resource_id: str) -> Optional[str]:
         """
         简化的文件类型检测：仅从URL/resource_id提取扩展名
-        
+
         Args:
             resource_id: 资源ID（URL或文件路径）
-            
+
         Returns:
             文件扩展名（如果支持），否则返回None
         """
@@ -313,10 +327,14 @@ class FileReader:
             缓存的解析内容，如果没有缓存则返回None
         """
         try:
-            # 获取文件内容用于生成解析缓存键
+            # 异步获取文件内容用于生成解析缓存键
             try:
-                with open(path, 'rb') as f:
-                    file_content = f.read()
+                loop = asyncio.get_event_loop()
+                file_content = await loop.run_in_executor(
+                    None,  # 使用默认线程池
+                    self._read_file_sync,
+                    path
+                )
                 self.logger.debug(f"直接读取本地文件内容: {path}")
             except Exception as e:
                 self.logger.debug(f"直接读取本地文件失败: {path}, 错误: {e}")

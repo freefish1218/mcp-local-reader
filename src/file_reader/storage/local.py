@@ -4,6 +4,7 @@
 """
 
 import os
+import asyncio
 import hashlib
 import mimetypes
 from pathlib import Path
@@ -171,13 +172,26 @@ class LocalFileStorageClient(BaseStorageClient):
             self.logger.error(f"路径验证失败: {file_path}, 错误: {e}")
             return None
     
+    def _read_file_sync(self, file_path: str) -> bytes:
+        """
+        同步读取文件内容（供线程池调用）
+
+        Args:
+            file_path: 文件路径
+
+        Returns:
+            文件内容字节数据
+        """
+        with open(file_path, 'rb') as f:
+            return f.read()
+
     def _get_cache_key(self, file_path: str) -> str:
         """
         生成缓存键
-        
+
         Args:
             file_path: 文件路径
-            
+
         Returns:
             缓存键字符串
         """
@@ -246,9 +260,13 @@ class LocalFileStorageClient(BaseStorageClient):
                     }
                     continue
                 
-                # 读取文件内容
-                with open(safe_path, 'rb') as f:
-                    file_content = f.read()
+                # 异步读取文件内容（使用线程池避免阻塞）
+                loop = asyncio.get_event_loop()
+                file_content = await loop.run_in_executor(
+                    None,  # 使用默认线程池
+                    self._read_file_sync,
+                    safe_path
+                )
                 results[file_path] = file_content
                 self.logger.debug(f"成功读取文件: {file_path}, 大小: {len(file_content)}字节")
                 
