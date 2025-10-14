@@ -74,10 +74,9 @@ logger.info("本地文件读取模式，只支持读取本地文件系统中的�
 # 创建FastMCP实例，在服务器层面设置版本和描述信息
 mcp = FastMCP(
     name=SERVER_INFO["name"],
-    description=SERVER_INFO["instructions"],  # 在 description 中包含版本信息
+    instructions=SERVER_INFO["instructions"],  # 在 instructions 中包含版本信息
     host=SERVER_CONFIG["host"],
-    port=SERVER_CONFIG["port"], 
-    base_path=SERVER_CONFIG["base_path"],
+    port=SERVER_CONFIG["port"],
     json_response=False,  # 使用SSE流
     stateless_http=True,  # 无状态模式，适合生产部署
 )
