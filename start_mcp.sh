@@ -1,3 +1,3 @@
 #!/bin/bash
-cd /Users/ben/develop/tools/mcp/mcp-local-reader
-uv run mcp_server.py
+cd "$(dirname "$0")"
+uv run --frozen mcp_server.py
